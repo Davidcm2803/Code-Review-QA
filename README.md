@@ -15,7 +15,6 @@ Además del análisis asistido por IA, la plataforma incorporará un conjunto de
 ## Estructura del Proyecto
 
 ```
-```
 QA-Code/
 ├── LICENSE
 ├── README.md
@@ -141,5 +140,4 @@ QA-Code/
             ├── ScanRepository.jsx
             ├── Settings.jsx
             └── UploadCode.jsx
-```
 ```
