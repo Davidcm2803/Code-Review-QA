@@ -17,19 +17,24 @@ export default function SeverityBreakdown({ metrics = {} }) {
 
   return (
     <Card title="Vulnerability Breakdown">
-      <div className="flex flex-col gap-3.5">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {data.map(({ key, label, count, color }) => (
-          <div key={key} className="flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
-            <div className="flex-1">
-              <div className="flex justify-between mb-1">
-                <span className="text-[13px]">{label}</span>
-                <span className="text-[11px] font-mono" style={{ color }}>{count}</span>
+          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: color }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                <span style={{ fontSize: 12 }}>{label}</span>
+                <span style={{ fontSize: 10, fontFamily: 'monospace', color }}>{count}</span>
               </div>
-              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--secondary)' }}>
+              <div style={{ height: 4, borderRadius: 2, overflow: 'hidden', background: 'var(--secondary)' }}>
                 <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{ width: `${(count / maxCount) * 100}%`, background: color }}
+                  style={{
+                    height: '100%',
+                    borderRadius: 2,
+                    width: `${(count / maxCount) * 100}%`,
+                    background: color,
+                    transition: 'width 0.5s ease',
+                  }}
                 />
               </div>
             </div>

@@ -124,7 +124,8 @@ export default function ScanRepository() {
         display: "flex",
         flexDirection: "column",
         gap: 20,
-        maxWidth: 780,
+        width: "100%",
+        maxWidth: 1320,
       }}
     >
       <div>
@@ -184,7 +185,7 @@ export default function ScanRepository() {
             style={{
               fontSize: 11,
               fontWeight: 600,
-              color: "#3a4a3f",
+              color: "#ffffff",
               letterSpacing: "0.8px",
               textTransform: "uppercase",
             }}

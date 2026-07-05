@@ -73,13 +73,14 @@ def compute_security_score(metrics: Dict[str, int]) -> int:
 
 
 def _strip_prefix(path: str) -> str:
-    #Elimina el prefijo del directorio temporal del path del archivo
-    # Ej: /tmp/aisecure_xyz/app/auth.py → app/auth.py
-    parts = path.split("/")
+    # Elimina el prefijo del directorio temporal del path del archivo
+    normalized = path.replace("\\", "/")
+    parts = normalized.split("/")
+
     for i, part in enumerate(parts):
         if part.startswith("aisecure_"):
             return "/".join(parts[i + 1:])
-    return path
+    return normalized
 
 #helpers con el significado de cada tag de bandit
 def _get_remediation(test_id: str, more_info_url: str) -> str:

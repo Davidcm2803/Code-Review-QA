@@ -90,7 +90,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div style={{ padding: 24, color: "var(--muted)", fontSize: 13 }}>
+      <div style={{ padding: 32, color: "#5a6b60", fontSize: 13 }}>
         Loading...
       </div>
     );
@@ -99,11 +99,12 @@ export default function Dashboard() {
   return (
     <div
       style={{
-        padding: 24,
+        padding: 32,
         display: "flex",
         flexDirection: "column",
-        gap: 24,
+        gap: 20,
         width: "100%",
+        maxWidth: 1320,
         boxSizing: "border-box",
       }}
     >
@@ -116,10 +117,10 @@ export default function Dashboard() {
         }}
       >
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 600 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: "#e2e8e4", margin: 0 }}>
             {scanData ? `${repoName}` : "Dashboard"}
           </h1>
-          <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>
+          <p style={{ fontSize: 13, color: "#5a6b60", marginTop: 6, marginBottom: 0 }}>
             {scanData?.summary ?? "Security overview and recent activity"}
           </p>
         </div>
@@ -129,17 +130,17 @@ export default function Dashboard() {
               display: "flex",
               alignItems: "center",
               gap: 6,
-              padding: "8px 16px",
+              padding: "7px 14px",
               borderRadius: 8,
               background: "var(--primary)",
               color: "var(--primary-fg)",
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: 600,
               cursor: "pointer",
               border: "none",
             }}
           >
-            <Zap size={14} /> New Scan
+            <Zap size={13} /> Quick Scan
           </button>
         </Link>
       </div>
@@ -149,7 +150,7 @@ export default function Dashboard() {
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 16,
+          gap: 12,
         }}
       >
         {STATS.map((s) => (
@@ -158,7 +159,7 @@ export default function Dashboard() {
       </div>
 
       {/* Breakdown + activity */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <SeverityBreakdown metrics={metrics} />
         <ActivityList scanData={scanData} />
       </div>

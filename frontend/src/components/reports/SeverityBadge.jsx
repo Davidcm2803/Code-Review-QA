@@ -9,8 +9,16 @@ export default function SeverityBadge({ level }) {
   const style = SEVERITY_STYLES[level] ?? SEVERITY_STYLES.low
   return (
     <span
-      className="rounded px-2 py-0.5 font-mono text-[11px] font-medium uppercase"
-      style={{ background: style.bg, color: style.fg }}
+      style={{
+        borderRadius: 4,
+        padding: '2px 6px',
+        fontFamily: 'monospace',
+        fontSize: 10,
+        fontWeight: 500,
+        textTransform: 'uppercase',
+        background: style.bg,
+        color: style.fg,
+      }}
     >
       {level}
     </span>

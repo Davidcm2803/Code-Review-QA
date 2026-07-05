@@ -1,67 +1,78 @@
-import { File, X, CheckCircle2, Loader2 } from 'lucide-react'
+import { File, X, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 
-const QUEUED_FILES = [
-  { id: 1, name: 'auth_service.py', size: '4.2 KB', status: 'done' },
-  { id: 2, name: 'payment_controller.ts', size: '7.8 KB', status: 'done' },
-  { id: 3, name: 'user_repository.go', size: '3.1 KB', status: 'uploading' },
-]
-
-function StatusIcon({ status }) {
-  if (status === 'done') {
-    return <CheckCircle2 size={16} style={{ color: 'var(--primary)' }} />
-  }
-  return <Loader2 size={16} className="spin" style={{ color: 'var(--muted)' }} />
+function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export default function FileQueue({ files = QUEUED_FILES, onRemove }) {
-  if (files.length === 0) {
+function StatusIcon({ status }) {
+  if (status === 'done') return <CheckCircle2 size={15} color="#22c55e" />
+  if (status === 'error') return <XCircle size={15} color="#f87171" />
+  if (status === 'uploading') return <Loader2 size={15} color="#8fa894" style={{ animation: 'spin 1s linear infinite' }} />
+  return <File size={14} color="#4a5c50" />
+}
+
+export default function FileQueue({ files, onRemove }) {
+  if (!files || files.length === 0) {
     return (
-      <div
-        className="flex h-full min-h-[320px] flex-col items-center justify-center gap-2 rounded-lg border text-center"
-        style={{ borderColor: 'var(--border)' }}
-      >
-        <p className="text-[13px]" style={{ color: 'var(--muted)' }}>
-          No files selected yet
-        </p>
+      <div style={{
+        minHeight: 260, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8,
+        boxSizing: 'border-box',
+      }}>
+        <p style={{ fontSize: 13, color: '#4a5c50', margin: 0 }}>No hay archivos seleccionados</p>
       </div>
     )
   }
 
   return (
-    <div
-      className="flex h-full min-h-[320px] flex-col rounded-lg border"
-      style={{ borderColor: 'var(--border)' }}
-    >
-      <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: 'var(--border)' }}>
-        <p className="text-[13px] font-medium">Files to scan</p>
-        <span className="font-mono text-xs" style={{ color: 'var(--muted)' }}>
-          {files.length} {files.length === 1 ? 'file' : 'files'}
+    <div style={{
+      minHeight: 260, display: 'flex', flexDirection: 'column',
+      background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden',
+      boxSizing: 'border-box',
+    }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '10px 14px', borderBottom: '1px solid var(--border)',
+      }}>
+        <span style={{ fontSize: 13, fontWeight: 500, color: '#c8d8cc' }}>Archivos a escanear</span>
+        <span style={{ fontSize: 12, color: '#4a5c50', fontFamily: 'monospace' }}>
+          {files.length} {files.length === 1 ? 'archivo' : 'archivos'}
         </span>
       </div>
 
-      <div className="flex-1 space-y-1 overflow-y-auto p-2">
+      <div style={{ flex: 1, overflowY: 'auto', padding: 6 }}>
         {files.map((file) => (
           <div
             key={file.id}
-            className="group flex items-center justify-between rounded-md px-3 py-2.5 transition-colors hover:bg-[var(--card)]"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '8px 10px', borderRadius: 6,
+            }}
           >
-            <div className="flex items-center gap-3 overflow-hidden">
-              <File size={15} style={{ color: 'var(--muted)' }} className="shrink-0" />
-              <div className="overflow-hidden">
-                <p className="truncate font-mono text-[13px]">{file.name}</p>
-                <p className="text-xs" style={{ color: 'var(--muted)' }}>{file.size}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+              <StatusIcon status={file.status} />
+              <div style={{ overflow: 'hidden' }}>
+                <p style={{
+                  fontSize: 13, fontFamily: 'monospace', color: '#c8d8cc', margin: 0,
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  {file.name}
+                </p>
+                <p style={{ fontSize: 11, color: file.status === 'error' ? '#f87171' : '#4a5c50', margin: 0 }}>
+                  {file.status === 'error' ? file.error : formatSize(file.size)}
+                </p>
               </div>
             </div>
-
-            <div className="flex shrink-0 items-center gap-3">
-              <StatusIcon status={file.status} />
+            {file.status !== 'uploading' && (
               <button
                 onClick={() => onRemove?.(file.id)}
-                className="opacity-0 transition-opacity group-hover:opacity-100"
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}
               >
-                <X size={14} style={{ color: 'var(--muted)' }} />
+                <X size={13} color="#4a5c50" />
               </button>
-            </div>
+            )}
           </div>
         ))}
       </div>

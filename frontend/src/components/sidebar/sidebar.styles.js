@@ -1,9 +1,8 @@
-
 const S = {
   aside: (collapsed) => ({
     display: 'flex', flexDirection: 'column', height: '100vh',
     width: collapsed ? 52 : 220, minWidth: collapsed ? 52 : 220,
-    background: '#0d100e', borderRight: '1px solid #1e2420',
+    background: 'var(--bg)', borderRight: '1px solid #1e2420',
     transition: 'width 0.15s ease, min-width 0.15s ease',
     overflow: 'hidden', flexShrink: 0,
   }),
@@ -77,7 +76,7 @@ const S = {
   bottomNav: {
     position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
     display: 'flex', alignItems: 'stretch',
-    background: '#0d100e', borderTop: '1px solid #1e2420',
+    background: 'var(--bg)', borderTop: '1px solid #1e2420',
     height: 60, paddingBottom: 'env(safe-area-inset-bottom)',
   },
   bottomNavItem: (active) => ({
@@ -99,7 +98,7 @@ const S = {
   },
   drawer: {
     position: 'fixed', bottom: 60, left: 0, right: 0, zIndex: 201,
-    background: '#0d100e', borderTop: '1px solid #1e2420',
+    background: 'var(--bg)', borderTop: '1px solid #1e2420',
     borderRadius: '16px 16px 0 0',
     padding: '12px 12px 8px',
     display: 'flex', flexDirection: 'column', gap: 2,
@@ -116,7 +115,6 @@ const S = {
     color: active ? '#22c55e' : '#a0b0a6',
   }),
 }
-
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)

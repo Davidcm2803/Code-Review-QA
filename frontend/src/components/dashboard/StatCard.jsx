@@ -2,18 +2,28 @@ import Card from '../layout/Card'
 
 export default function StatCard({ label, value, trend, icon: Icon }) {
   return (
-    <Card className="min-w-0">
-      <div className="flex items-center justify-between">
+    <Card>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div
-          style={{ background: 'var(--secondary)', color: 'var(--primary)' }}
-          className="flex items-center justify-center w-9 h-9 rounded-md"
+          style={{
+            background: 'var(--secondary)',
+            color: 'var(--primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 28,
+            height: 28,
+            borderRadius: 6,
+          }}
         >
-          <Icon size={18} />
+          <Icon size={15} />
         </div>
-        <span className="text-[11px] font-mono" style={{ color: 'var(--safe)' }}>{trend}</span>
+        <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--safe)' }}>{trend}</span>
       </div>
-      <p className="text-[24px] font-semibold font-mono mt-3">{value}</p>
-      <p className="text-[12px] mt-0.5" style={{ color: 'var(--muted)' }}>{label}</p>
+      <p style={{ fontSize: 19, fontWeight: 600, fontFamily: 'monospace', margin: 0, marginTop: 8 }}>
+        {value}
+      </p>
+      <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0, marginTop: 2 }}>{label}</p>
     </Card>
   )
 }

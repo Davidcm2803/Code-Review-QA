@@ -4,22 +4,25 @@ import ReportCard from './ReportCard'
 function SkeletonCard() {
   return (
     <div
-      className="rounded-xl border p-5 flex flex-col gap-4 animate-pulse"
-      style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+      style={{
+        borderRadius: 8,
+        border: '1px solid var(--border)',
+        background: 'var(--card)',
+        padding: '14px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+      }}
+      className="animate-pulse"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-2 flex-1">
-          <div className="h-4 w-2/3 rounded" style={{ background: 'var(--secondary)' }} />
-          <div className="h-3 w-1/3 rounded" style={{ background: 'var(--secondary)' }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ height: 12, width: '60%', borderRadius: 4, background: 'var(--secondary)' }} />
+          <div style={{ height: 10, width: '35%', borderRadius: 4, background: 'var(--secondary)' }} />
         </div>
-        <div className="h-10 w-12 rounded-lg" style={{ background: 'var(--secondary)' }} />
+        <div style={{ height: 24, width: 50, borderRadius: 6, background: 'var(--secondary)' }} />
       </div>
-      <div className="h-3 w-1/2 rounded" style={{ background: 'var(--secondary)' }} />
-      <div className="h-px w-full" style={{ background: 'var(--border)' }} />
-      <div className="flex justify-between">
-        <div className="h-3 w-24 rounded" style={{ background: 'var(--secondary)' }} />
-        <div className="h-7 w-16 rounded-md" style={{ background: 'var(--secondary)' }} />
-      </div>
+      <div style={{ height: 10, width: '45%', borderRadius: 4, background: 'var(--secondary)' }} />
     </div>
   )
 }
@@ -27,8 +30,8 @@ function SkeletonCard() {
 export default function ReportList({ reports, loading }) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-4 @md:grid-cols-2 @xl:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {Array.from({ length: 3 }).map((_, i) => (
           <SkeletonCard key={i} />
         ))}
       </div>
@@ -38,12 +41,21 @@ export default function ReportList({ reports, loading }) {
   if (!reports || reports.length === 0) {
     return (
       <div
-        className="flex flex-col items-center justify-center gap-3 rounded-xl border py-16"
-        style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          borderRadius: 8,
+          border: '1px solid var(--border)',
+          background: 'var(--card)',
+          padding: '48px 0',
+        }}
       >
-        <ShieldOff size={32} style={{ color: 'var(--muted)' }} />
-        <p className="text-[14px] font-medium">No scans yet</p>
-        <p className="text-[13px]" style={{ color: 'var(--muted)' }}>
+        <ShieldOff size={28} style={{ color: 'var(--muted)' }} />
+        <p style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>No scans yet</p>
+        <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
           Run your first scan to see reports here
         </p>
       </div>
@@ -51,7 +63,7 @@ export default function ReportList({ reports, loading }) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 @md:grid-cols-2 @xl:grid-cols-3">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {reports.map((report) => (
         <ReportCard key={report.scan_id} report={report} />
       ))}

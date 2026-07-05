@@ -13,11 +13,10 @@ export const NAV = [
   { href: '/scan',     label: 'Scan',      icon: GitBranch },
   { href: '/upload',   label: 'Upload',    icon: Upload },
   { href: '/reports',  label: 'Reports',   icon: FileText },
-  { href: '/chat',     label: 'Chat',      icon: MessageCircle },  
-  { href: '/settings', label: 'Settings',  icon: Settings },       
+  { href: '/chat',     label: 'Chat',      icon: MessageCircle },
+  { href: '/settings', label: 'Settings',  icon: Settings },
 ]
 
-// En móvil mostramos las primeras 4 + "More" que abre un drawer
 const MOBILE_NAV_VISIBLE = 5
 
 function useIsMobile() {
@@ -34,7 +33,7 @@ const S = {
   aside: (collapsed) => ({
     display: 'flex', flexDirection: 'column', height: '100vh',
     width: collapsed ? 52 : 220, minWidth: collapsed ? 52 : 220,
-    background: '#0d100e', borderRight: '1px solid #1e2420',
+    background: 'var(--bg)', borderRight: '1px solid #1e2420',
     transition: 'width 0.15s ease, min-width 0.15s ease',
     overflow: 'hidden', flexShrink: 0,
   }),
@@ -105,11 +104,10 @@ const S = {
     background: 'transparent', color: '#5a6b60', cursor: 'pointer',
   },
 
-  // ── Mobile bottom nav ─────────────────────────────────────
   bottomNav: {
     position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
     display: 'flex', alignItems: 'stretch',
-    background: '#0d100e', borderTop: '1px solid #1e2420',
+    background: 'var(--bg)', borderTop: '1px solid #1e2420',
     height: 60, paddingBottom: 'env(safe-area-inset-bottom)',
   },
   bottomNavItem: (active) => ({
@@ -121,19 +119,17 @@ const S = {
     transition: 'color 0.12s',
     paddingTop: 4,
   }),
-  // Spacer para que el contenido no quede detrás del bottom nav
   mobileContentSpacer: {
     height: 60,
   },
 
-  // ── Mobile drawer (More) ──────────────────────────────────
   drawerOverlay: {
     position: 'fixed', inset: 0, zIndex: 200,
     background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)',
   },
   drawer: {
     position: 'fixed', bottom: 60, left: 0, right: 0, zIndex: 201,
-    background: '#0d100e', borderTop: '1px solid #1e2420',
+    background: 'var(--bg)', borderTop: '1px solid #1e2420',
     borderRadius: '16px 16px 0 0',
     padding: '12px 12px 8px',
     display: 'flex', flexDirection: 'column', gap: 2,
@@ -151,7 +147,6 @@ const S = {
   }),
 }
 
-// ── Mobile Component ──────────────────────────────────────────
 function MobileNav({ user, logout, onOpenModal }) {
   const { pathname } = useLocation()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -162,7 +157,6 @@ function MobileNav({ user, logout, onOpenModal }) {
 
   return (
     <>
-      {/* Spacer so page content isn't hidden behind the bar */}
       <div style={S.mobileContentSpacer} />
 
       <nav style={S.bottomNav}>
@@ -178,7 +172,6 @@ function MobileNav({ user, logout, onOpenModal }) {
           </Link>
         ))}
 
-        {/* "More" button */}
         <button
           style={S.bottomNavItem(overflowActive || drawerOpen)}
           onClick={() => setDrawerOpen(v => !v)}
@@ -188,7 +181,6 @@ function MobileNav({ user, logout, onOpenModal }) {
         </button>
       </nav>
 
-      {/* Drawer for overflow nav items */}
       {drawerOpen && (
         <>
           <div style={S.drawerOverlay} onClick={() => setDrawerOpen(false)} />
@@ -207,7 +199,6 @@ function MobileNav({ user, logout, onOpenModal }) {
               </Link>
             ))}
 
-            {/* Auth inside drawer */}
             <div style={{ borderTop: '1px solid #1e2420', marginTop: 8, paddingTop: 8 }}>
               {user ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px' }}>
@@ -241,7 +232,6 @@ function MobileNav({ user, logout, onOpenModal }) {
   )
 }
 
-// ── Desktop Component (sin cambios) ──────────────────────────
 function DesktopSidebar({ user, logout, onOpenModal }) {
   const { pathname } = useLocation()
   const [collapsed, setCollapsed]         = useState(false)
@@ -329,7 +319,6 @@ function DesktopSidebar({ user, logout, onOpenModal }) {
   )
 }
 
-// ── Export principal ──────────────────────────────────────────
 export default function Sidebar() {
   const { user, logout } = useAuth()
   const isMobile = useIsMobile()
