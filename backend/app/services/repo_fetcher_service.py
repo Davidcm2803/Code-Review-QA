@@ -30,20 +30,43 @@ def fetch_repo(clone_url: str, branch: str = "main") -> str:
         raise
 
 
+def _safe_relative_path(filename: str) -> str:
+    # Normaliza separadores y elimina intentos de path mal hechos, sino que los estandariza
+    normalized = filename.replace("\\", "/")
+    # descarta drive letters tipo "C:" 
+    if ":" in normalized:
+        normalized = normalized.split(":")[-1]
+    parts = [p for p in normalized.split("/") if p not in ("", ".", "..")]
+    if not parts:
+        parts = ["unnamed_file"]
+    return os.path.join(*parts)
+
+
 def create_temp_workspace_from_files(files: list[tuple[str, bytes]]) -> str:
-    # Escribe archivos subidos/pegados a un dir temporal, sin git
+    # Escribe archivos subidos o pegados a un dir temporal
     tmp_dir = tempfile.mkdtemp(prefix="aisecure_upload_")
     for filename, content in files:
-        safe_name = os.path.basename(filename)
-        dest = os.path.join(tmp_dir, safe_name)
+        rel_path = _safe_relative_path(filename)
+        dest = os.path.join(tmp_dir, rel_path)
+        if not os.path.abspath(dest).startswith(os.path.abspath(tmp_dir) + os.sep):
+            logger.warning(f"Nombre de archivo sospechoso ignorado: {filename}")
+            continue
+
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+
+        # Si dos archivos distintos terminan mapeando al mismo dest tira alert
+        if os.path.exists(dest):
+            logger.warning(f"Archivo duplicado detectado, se sobreescribe: {rel_path}")
+
         with open(dest, "wb") as f:
             f.write(content)
+
     logger.info(f"Workspace temporal creado con {len(files)} archivo(s) en {tmp_dir}")
     return tmp_dir
 
 
 def cleanup_repo(path: str):
-    # Elimina el directorio temporal del repo/workspace
+    # Elimina el directorio temporal del repo
     if path and os.path.exists(path):
         shutil.rmtree(path, ignore_errors=True)
         logger.info(f"Directorio temporal eliminado: {path}")

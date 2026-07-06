@@ -48,8 +48,93 @@ def normalize_bandit(raw: dict, repository_id: str, scan_id: str) -> List[Dict[s
     return normalized
 
 
+# Mapa de severidad de Semgrep
+SEMGREP_SEVERITY_MAP = {
+    "ERROR":   "high",
+    "WARNING": "medium",
+    "INFO":    "low",
+}
+
+
+def _resolve_semgrep_severity(severity: str, confidence: str) -> str:
+    if severity == "ERROR" and confidence == "HIGH":
+        return "critical"
+    return SEMGREP_SEVERITY_MAP.get(severity, "low")
+
+
+def normalize_semgrep(raw: dict, repository_id: str, scan_id: str, repo_path: str) -> List[Dict[str, Any]]:
+    #Convierte el resultado de Semgrep al schema de MongoDB
+    results = raw.get("results", [])
+    normalized = []
+
+    for item in results:
+        extra = item.get("extra", {})
+        metadata = extra.get("metadata", {})
+
+        severity = _resolve_semgrep_severity(
+            extra.get("severity", "INFO"),
+            metadata.get("confidence", "LOW"),
+        )
+
+        start_line = item.get("start", {}).get("line", 0)
+        end_line = item.get("end", {}).get("line", start_line)
+        check_id = item.get("check_id", "unknown-rule")
+
+        vuln = {
+            "scan_id":                    scan_id,
+            "repository_id":              repository_id,
+            "title":                      extra.get("message", "Unknown issue").split(".")[0][:200],
+            "description":                (
+                f"{extra.get('message', '')}. "
+                f"Regla: {check_id}. "
+                f"OWASP: {', '.join(metadata.get('owasp', [])) or 'N/A'}."
+            ),
+            "severity":                   severity,
+            "detector_source":            "semgrep",
+            "file_path":                  _strip_repo_path(item.get("path", ""), repo_path),
+            "line_start":                 start_line,
+            "line_end":                   end_line,
+            "vulnerable_code":            _extract_snippet(item.get("path", ""), start_line, end_line),
+            "remediation_recommendation": _get_semgrep_remediation(metadata),
+            "status":                     "open",
+        }
+        normalized.append(vuln)
+
+    return normalized
+
+
+def _extract_snippet(file_path: str, start_line: int, end_line: int) -> str:
+    # Semgrep  requiere login
+    if not file_path or not start_line:
+        return ""
+    try:
+        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            lines = f.readlines()
+        # Lineas de semgrep son 1-indexed 
+        snippet = lines[start_line - 1:end_line]
+        return "".join(snippet).strip()
+    except (OSError, IndexError):
+        return ""
+
+
+def _strip_repo_path(path: str, repo_path: str) -> str:
+    # Convierte el path absoluto que devuelve semgrep en un path relativo al repo
+    normalized_path = path.replace("\\", "/")
+    normalized_repo = repo_path.replace("\\", "/").rstrip("/")
+    if normalized_path.startswith(normalized_repo):
+        return normalized_path[len(normalized_repo):].lstrip("/")
+    return _strip_prefix(normalized_path)
+
+
+def _get_semgrep_remediation(metadata: dict) -> str:
+    references = metadata.get("references", [])
+    base = "Revisar el patron detectado y aplicar las practicas seguras recomendadas por la regla de Semgrep."
+    if references:
+        base += f" Mas info: {references[0]}"
+    return base
+
+
 def compute_metrics(vulns: List[Dict]) -> Dict[str, int]:
-    #Cuenta vulnerabilidades para metricas
     metrics = {"critical": 0, "high": 0, "medium": 0, "low": 0}
     for v in vulns:
         sev = v.get("severity", "low")

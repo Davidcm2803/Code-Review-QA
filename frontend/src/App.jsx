@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import ScanRepository from './pages/ScanRepository'
 import UploadCode from './pages/UploadCode'
 import Reports from './pages/Reports'
+import Chat from './pages/Chat'
 import Settings from './pages/Settings'
 
 function AppShell() {
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/scan"     element={<ScanRepository />} />
           <Route path="/upload"   element={<UploadCode />} />
           <Route path="/reports"  element={<Reports />} />
+          <Route path="/chat"     element={<Chat />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>

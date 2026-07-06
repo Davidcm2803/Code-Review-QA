@@ -2,6 +2,7 @@ import os
 import asyncio
 from datetime import datetime, timezone
 from bson import ObjectId
+from bson.errors import InvalidId
 from fastapi import UploadFile
 from app.database.connection import get_db
 from app.services.repo_fetcher_service import (
@@ -16,8 +17,16 @@ from app.core.logger import logger
 # extensiones permitidas
 ALLOWED_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".cs"}
 MAX_FILE_SIZE = 1 * 1024 * 1024   # 1mb por archivo
-MAX_FILES = 20                    # max archivos por scan
+MAX_FILES = 50                    # max archivos por scan
 MAX_PASTE_LINES = 500             # max lineas para paste
+
+
+def _to_object_id(id_str: str) -> ObjectId:
+    # Convierte a ObjectId o levanta ValueError con alert
+    try:
+        return ObjectId(id_str)
+    except (InvalidId, TypeError):
+        raise ValueError(f"Id invalido: {id_str}")
 
 
 async def _emit_event(db, scan_id: str, event_type: str, message: str):
@@ -31,7 +40,7 @@ async def _emit_event(db, scan_id: str, event_type: str, message: str):
 
 
 async def _create_repo_and_scan(db, user_id: str, repo_name: str, source_type: str, extra_repo_fields: dict = None):
-    # crea repo y scan en running, devuelve ids
+    # crea repo y scan en running
     now = datetime.now(timezone.utc)
     repo_doc = {
         "_id":         ObjectId(),
@@ -65,7 +74,7 @@ async def _create_repo_and_scan(db, user_id: str, repo_name: str, source_type: s
 
 
 async def start_scan(clone_url: str, branch: str, repo_name: str, user_id: str) -> str:
-    # entrada: scan de repo github
+    # scan de repo github
     db = get_db()
     now = datetime.now(timezone.utc)
 
@@ -110,7 +119,7 @@ async def start_scan(clone_url: str, branch: str, repo_name: str, user_id: str) 
 
 
 async def start_scan_from_upload(files: list[UploadFile], user_id: str) -> str:
-    # entrada: scan de archivos subidos
+    # scan de archivos subidos desde upload
     if not files:
         raise ValueError("No se recibieron archivos")
     if len(files) > MAX_FILES:
@@ -137,7 +146,7 @@ async def start_scan_from_upload(files: list[UploadFile], user_id: str) -> str:
 
 
 async def start_scan_from_paste(code: str, filename: str, user_id: str) -> str:
-    # entrada: scan de codigo pegado
+    # scan de codigo pegado
     lines = code.splitlines()
     if not lines:
         raise ValueError("El codigo esta vacio")
@@ -245,10 +254,16 @@ async def _run_scan_task_from_files(db, scan_id: str, repository_id: str, files:
             cleanup_repo(repo_path)
 
 
-async def get_scan_status(scan_id: str) -> dict | None:
+async def get_scan_status(scan_id: str, user_id: str) -> dict | None:
     # devuelve estado actual y ultimo mensaje
+    # Filtra por user_id ademas de _id
     db = get_db()
-    scan = await db["scans"].find_one({"_id": ObjectId(scan_id)})
+    try:
+        oid = _to_object_id(scan_id)
+    except ValueError:
+        return None
+
+    scan = await db["scans"].find_one({"_id": oid, "user_id": user_id})
     if not scan:
         return None
 
@@ -268,10 +283,15 @@ async def get_scan_status(scan_id: str) -> dict | None:
     }
 
 
-async def get_scan_results(scan_id: str) -> dict | None:
-    # devuelve scan completo con sus vulns
+async def get_scan_results(scan_id: str, user_id: str) -> dict | None:
+    # devuelve scan completo con sus vulns, solo si pertenece al user_id
     db = get_db()
-    scan = await db["scans"].find_one({"_id": ObjectId(scan_id)})
+    try:
+        oid = _to_object_id(scan_id)
+    except ValueError:
+        return None
+
+    scan = await db["scans"].find_one({"_id": oid, "user_id": user_id})
     if not scan:
         return None
 
@@ -293,3 +313,38 @@ async def get_scan_results(scan_id: str) -> dict | None:
         "vulnerabilities": vulns,
         "completed_at":    scan.get("completed_at").strftime("%Y-%m-%dT%H:%M:%SZ") if scan.get("completed_at") else None,
     }
+
+
+async def get_latest_scan(user_id: str) -> dict | None:
+    # devuelve el ultimo scan completado del usuario ya con sus vulns
+    db = get_db()
+    scan = await db["scans"].find_one(
+        {"user_id": user_id, "status": "completed"},
+        sort=[("completed_at", -1)],
+    )
+    if not scan:
+        return None
+    return await get_scan_results(str(scan["_id"]), user_id)
+
+
+async def get_vulnerability(scan_id: str, vuln_id: str, user_id: str) -> dict | None:
+    # devuelve una vulnerabilidad puntual, validando que el scan padre
+    # Pensado para el flujo de chat/RAG: el frontend pide detalle de UNA validar si mas para mas contexto
+    # vulnerabilidad sin traer todo el scan.
+    db = get_db()
+    try:
+        scan_oid = _to_object_id(scan_id)
+        vuln_oid = _to_object_id(vuln_id)
+    except ValueError:
+        return None
+
+    scan = await db["scans"].find_one({"_id": scan_oid, "user_id": user_id})
+    if not scan:
+        return None
+
+    vuln = await db["vulnerabilities"].find_one({"_id": vuln_oid, "scan_id": scan_id})
+    if not vuln:
+        return None
+
+    vuln["_id"] = str(vuln["_id"])
+    return vuln

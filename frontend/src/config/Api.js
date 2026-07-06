@@ -81,3 +81,23 @@ export const scanService = {
       tick()
     }),
 }
+
+export const chatbotService = {
+  listSessions: (scanId) =>
+    api.get(`/api/chatbot/sessions?scan_id=${scanId}`),
+
+  createSession: (scanId, vulnerabilityId = null) =>
+    api.post('/api/chatbot/sessions', {
+      scan_id: scanId,
+      vulnerability_id: vulnerabilityId,
+    }),
+
+  getMessages: (sessionId) =>
+    api.get(`/api/chatbot/sessions/${sessionId}/messages`),
+
+  sendMessage: (sessionId, question, vulnerabilityId = null) =>
+    api.post(`/api/chatbot/sessions/${sessionId}/messages`, {
+      question,
+      vulnerability_id: vulnerabilityId,
+    }),
+}

@@ -1,23 +1,43 @@
+from urllib.parse import urlparse
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
-from pydantic import BaseModel
-from bson import ObjectId
+from pydantic import BaseModel, field_validator
 from app.services.scanner_service import (
     start_scan,
     start_scan_from_upload,
     start_scan_from_paste,
     get_scan_status,
     get_scan_results,
+    get_latest_scan,
+    get_vulnerability,
 )
 from app.core.deps import get_current_user
-from app.database.connection import get_db
 
 router = APIRouter(prefix="/api/scan", tags=["scan"])
+
+# Whitelist de hosts permitidos para clonar. Sin esto, clone_url llega directo
+# a `git clone <url>` en fetch_repo: alguien podria mandar file:///etc/passwd,
+# http://localhost:<puerto-interno>, o una IP de metadata cloud (169.254.169.254)
+# y usar el scanner como proxy para leer archivos locales o pegarle a servicios
+# internos (SSRF). Ajustar esta lista si necesitan soportar mas proveedores
+# (Bitbucket, un GitLab self-hosted, etc).
+ALLOWED_GIT_HOSTS = {"github.com", "gitlab.com"}
 
 
 class ScanRequest(BaseModel):
     clone_url: str
     branch:    str = "main"
     repo_name: str = ""
+
+    @field_validator("clone_url")
+    @classmethod
+    def validate_clone_url(cls, v: str) -> str:
+        parsed = urlparse(v)
+        if parsed.scheme != "https":
+            raise ValueError("clone_url debe usar https://")
+        host = (parsed.hostname or "").lower()
+        if host not in ALLOWED_GIT_HOSTS:
+            raise ValueError(f"Host no permitido: {host}. Permitidos: {', '.join(ALLOWED_GIT_HOSTS)}")
+        return v
 
 
 class PasteRequest(BaseModel):
@@ -27,10 +47,8 @@ class PasteRequest(BaseModel):
 
 @router.post("/start")
 async def start_scan_endpoint(body: ScanRequest, current_user: dict = Depends(get_current_user)):
-    # Inicia un scan clonando un repo de GitHub
-    if not body.clone_url:
-        raise HTTPException(status_code=400, detail="clone_url es requerido")
-
+    # Inicia un scan clonando un repo de GitHub/GitLab
+    # Esquema corre en el modelo Pydantic
     repo_name = body.repo_name or body.clone_url.rstrip("/").split("/")[-1].replace(".git", "")
 
     scan_id = await start_scan(
@@ -68,21 +86,18 @@ async def paste_scan_endpoint(body: PasteRequest, current_user: dict = Depends(g
 @router.get("/latest")
 async def latest_scan_endpoint(current_user: dict = Depends(get_current_user)):
     # Devuelve el ultimo scan completado del usuario
-    db = get_db()
-    scan = await db["scans"].find_one(
-        {"user_id": str(current_user["_id"]), "status": "completed"},
-        sort=[("completed_at", -1)],
-    )
-    if not scan:
+    result = await get_latest_scan(user_id=str(current_user["_id"]))
+    if not result:
         raise HTTPException(status_code=404, detail="No hay scans completados")
-
-    scan_id = str(scan["_id"])
-    return await get_scan_results(scan_id)
+    return result
 
 
 @router.get("/history")
 async def scan_history_endpoint(current_user: dict = Depends(get_current_user)):
-    # Devuelve el historial de scans del usuario con métricas resumidas
+    # Devuelve el historial de scans del usuario con metricas resumidas
+    from app.database.connection import get_db
+    from bson import ObjectId
+
     db = get_db()
     cursor = db["scans"].find(
         {"user_id": str(current_user["_id"])},
@@ -93,7 +108,6 @@ async def scan_history_endpoint(current_user: dict = Depends(get_current_user)):
         repo = await db["repositories"].find_one({"_id": ObjectId(scan["repository_id"])})
         vuln_counts = await db["vulnerabilities"].count_documents({"scan_id": str(scan["_id"])})
 
-        # Severidades únicas presentes en este scan
         pipeline = [
             {"$match": {"scan_id": str(scan["_id"])}},
             {"$group": {"_id": "$severity"}},
@@ -101,7 +115,6 @@ async def scan_history_endpoint(current_user: dict = Depends(get_current_user)):
         severity_docs = await db["vulnerabilities"].aggregate(pipeline).to_list(length=10)
         severities = [d["_id"] for d in severity_docs if d["_id"]]
 
-        # branch solo aplica a repos de github, no a upload/paste
         branch = repo["github_metadata"]["branch"] if repo and repo.get("github_metadata") else None
 
         scans.append({
@@ -122,8 +135,9 @@ async def scan_history_endpoint(current_user: dict = Depends(get_current_user)):
 
 @router.get("/{scan_id}/status")
 async def scan_status_endpoint(scan_id: str, current_user: dict = Depends(get_current_user)):
-    # Estado actual del scan (para polling)
-    result = await get_scan_status(scan_id)
+    # Estado actual del scan para hacer polling
+    # que el scan pertenezca a current_user
+    result = await get_scan_status(scan_id, user_id=str(current_user["_id"]))
     if not result:
         raise HTTPException(status_code=404, detail="Scan no encontrado")
     return result
@@ -131,10 +145,24 @@ async def scan_status_endpoint(scan_id: str, current_user: dict = Depends(get_cu
 
 @router.get("/{scan_id}/results")
 async def scan_results_endpoint(scan_id: str, current_user: dict = Depends(get_current_user)):
-    # Resultado final del scan con vulnerabilidades
-    result = await get_scan_results(scan_id)
+    # Resultado final del scan con vulnerabilidades 
+    result = await get_scan_results(scan_id, user_id=str(current_user["_id"]))
     if not result:
         raise HTTPException(status_code=404, detail="Scan no encontrado")
     if result["status"] == "running":
         raise HTTPException(status_code=202, detail="Scan todavía en progreso")
     return result
+
+
+@router.get("/{scan_id}/vulnerabilities/{vuln_id}")
+async def vulnerability_detail_endpoint(
+    scan_id: str,
+    vuln_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    # Detalle de UNA vulnerabilidad puntual, validar si traer todas para mayor contexto
+    # traer todo get_scan_results solo para abrir el detalle de un finding).
+    vuln = await get_vulnerability(scan_id, vuln_id, user_id=str(current_user["_id"]))
+    if not vuln:
+        raise HTTPException(status_code=404, detail="Vulnerabilidad no encontrada")
+    return vuln
