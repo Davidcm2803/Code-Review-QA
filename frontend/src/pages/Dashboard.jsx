@@ -36,7 +36,6 @@ export default function Dashboard() {
     api
       .get("/api/scan/latest")
       .then((data) => {
-        console.log("completed_at raw:", data.completed_at);
         setScanData(data);
       })
       .catch(() => setScanData(null))
@@ -108,7 +107,6 @@ export default function Dashboard() {
         boxSizing: "border-box",
       }}
     >
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -145,7 +143,6 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* Stat cards */}
       <div
         style={{
           display: "grid",
@@ -158,7 +155,6 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Breakdown + activity */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <SeverityBreakdown metrics={metrics} />
         <ActivityList scanData={scanData} />

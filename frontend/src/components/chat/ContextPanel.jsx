@@ -1,11 +1,18 @@
-import { XCircle, AlertCircle, Info, X, GitBranch } from 'lucide-react'
+import { GitBranch, ShieldAlert, RefreshCw } from 'lucide-react'
 import Card from '../layout/Card'
 
-const ICON = {
-  critical: <XCircle size={12} style={{ color: 'var(--critical)', flexShrink: 0 }} />,
-  high: <XCircle size={12} style={{ color: 'var(--high)', flexShrink: 0 }} />,
-  medium: <AlertCircle size={12} style={{ color: 'var(--medium)', flexShrink: 0 }} />,
-  low: <Info size={12} style={{ color: 'var(--low)', flexShrink: 0 }} />,
+const SEVERITY_COLORS = {
+  critical: 'var(--critical)',
+  high: 'var(--high)',
+  medium: 'var(--medium)',
+  low: 'var(--low)',
+}
+
+function severityCounts(vulns) {
+  return vulns.reduce((acc, v) => {
+    acc[v.severity] = (acc[v.severity] ?? 0) + 1
+    return acc
+  }, {})
 }
 
 export default function ContextPanel({
@@ -13,11 +20,13 @@ export default function ContextPanel({
   selectedScanId,
   onSelectScan,
   vulnerabilities,
-  selectedVulnId,
-  onSelectVuln,
   loadingScans,
   loadingVulns,
+  onNewChat,
 }) {
+  const counts = severityCounts(vulnerabilities)
+  const total = vulnerabilities.length
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: 280, flexShrink: 0 }}>
       <Card title="Repositorio">
@@ -28,128 +37,134 @@ export default function ContextPanel({
             No hay scans todavía. Corré uno primero.
           </p>
         ) : (
-          <select
-            value={selectedScanId ?? ''}
-            onChange={(e) => onSelectScan(e.target.value)}
-            style={{
-              width: '100%',
-              fontSize: 12,
-              fontFamily: 'var(--font-mono)',
-              background: 'var(--secondary)',
-              color: 'var(--fg)',
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              padding: '7px 8px',
-            }}
-          >
-            <option value="" disabled>
-              Seleccioná un scan
-            </option>
-            {scans.map((s) => (
-              <option key={s._id ?? s.scan_id} value={s._id ?? s.scan_id}>
-                {s.repo_name ?? s.name ?? 'scan sin nombre'}
-              </option>
-            ))}
-          </select>
-        )}
-      </Card>
-
-      <Card title="Contexto (opcional)">
-        {!selectedScanId ? (
-          <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
-            Elegí un scan para ver sus vulnerabilidades.
-          </p>
-        ) : loadingVulns ? (
-          <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>Cargando hallazgos...</p>
-        ) : vulnerabilities.length === 0 ? (
-          <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
-            Este scan no tiene vulnerabilidades.
-          </p>
-        ) : (
-          <>
-            {selectedVulnId && (
-              <button
-                onClick={() => onSelectVuln(null)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontSize: 11,
-                  color: 'var(--muted)',
-                  background: 'transparent',
-                  border: '1px solid var(--border)',
-                  borderRadius: 6,
-                  padding: '5px 8px',
-                  marginBottom: 8,
-                  cursor: 'pointer',
-                }}
-              >
-                <X size={11} /> Quitar contexto puntual
-              </button>
-            )}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 5,
-                maxHeight: 320,
-                overflowY: 'auto',
-              }}
-            >
-              {vulnerabilities.map((v) => {
-                const id = v._id ?? v.id
-                const active = id === selectedVulnId
-                return (
-                  <button
-                    key={id}
-                    onClick={() => onSelectVuln(id)}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {scans.map((s) => {
+              const id = s._id ?? s.scan_id
+              const active = id === selectedScanId
+              return (
+                <button
+                  key={id}
+                  onClick={() => onSelectScan(id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    textAlign: 'left',
+                    padding: '9px 10px',
+                    borderRadius: 8,
+                    border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+                    background: active
+                      ? 'color-mix(in srgb, var(--primary) 12%, var(--card))'
+                      : 'var(--card)',
+                    cursor: 'pointer',
+                    transition: 'border-color .15s, background .15s',
+                  }}
+                >
+                  <GitBranch
+                    size={13}
+                    style={{ color: active ? 'var(--primary)' : 'var(--muted)', flexShrink: 0 }}
+                  />
+                  <span
                     style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 7,
-                      textAlign: 'left',
-                      padding: '7px 8px',
-                      borderRadius: 6,
-                      border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                      background: active ? 'var(--secondary)' : 'transparent',
-                      cursor: 'pointer',
+                      fontSize: 12,
+                      fontFamily: 'var(--font-mono)',
+                      color: 'var(--fg)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    {ICON[v.severity] ?? ICON.low}
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontFamily: 'var(--font-mono)',
-                        color: 'var(--fg)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {v.title}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </>
+                    {s.repo_name ?? s.name ?? 'scan sin nombre'}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         )}
       </Card>
 
       {selectedScanId && (
-        <div
+        <Card title="Contexto del chat">
+          {loadingVulns ? (
+            <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>Indexando hallazgos...</p>
+          ) : total === 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
+              Este scan no tiene vulnerabilidades.
+            </p>
+          ) : (
+            <>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: 12,
+                  color: 'var(--fg)',
+                  marginBottom: 10,
+                }}
+              >
+                <ShieldAlert size={13} style={{ color: 'var(--primary)' }} />
+                {total} hallazgo{total !== 1 ? 's' : ''} disponibles como contexto
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {Object.entries(counts).map(([sev, n]) => (
+                  <span
+                    key={sev}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      fontSize: 11,
+                      fontFamily: 'var(--font-mono)',
+                      color: 'var(--fg)',
+                      background: 'var(--secondary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 999,
+                      padding: '3px 9px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: SEVERITY_COLORS[sev] ?? 'var(--muted)',
+                      }}
+                    />
+                    {n} {sev}
+                  </span>
+                ))}
+              </div>
+
+              <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 10, marginBottom: 0, lineHeight: 1.4 }}>
+                El asistente busca automáticamente los hallazgos más relevantes para
+                cada pregunta — no hace falta elegir uno.
+              </p>
+            </>
+          )}
+        </Card>
+      )}
+
+      {selectedScanId && (
+        <button
+          onClick={onNewChat}
           style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: 6,
-            fontSize: 11,
+            fontSize: 12,
             color: 'var(--muted)',
-            padding: '0 2px',
+            background: 'transparent',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            padding: '8px 10px',
+            cursor: 'pointer',
           }}
         >
-          <GitBranch size={11} />
-          Preguntando sobre {vulnerabilities.length} hallazgo(s) indexados
-        </div>
+          <RefreshCw size={12} /> Nueva conversación
+        </button>
       )}
     </div>
   )

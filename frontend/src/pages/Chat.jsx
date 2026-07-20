@@ -8,6 +8,8 @@ import EmptyChatState from '../components/chat/EmptyChatState'
 import { scanService, chatbotService } from '../config/Api'
 import { useAuth } from '../context/AuthContext'
 
+const DAILY_LIMIT = 10
+
 export default function Chat() {
   const { user } = useAuth()
 
@@ -17,16 +19,15 @@ export default function Chat() {
 
   const [vulnerabilities, setVulnerabilities] = useState([])
   const [loadingVulns, setLoadingVulns] = useState(false)
-  const [selectedVulnId, setSelectedVulnId] = useState(null)
 
   const [sessionId, setSessionId] = useState(null)
   const [messages, setMessages] = useState([])
   const [sending, setSending] = useState(false)
   const [backendReady, setBackendReady] = useState(true)
+  const [messagesLeft, setMessagesLeft] = useState(DAILY_LIMIT)
 
   const scrollRef = useRef(null)
 
-  // Cargar historial de scans para elegir sobre cuál preguntar
   useEffect(() => {
     if (!user) {
       setLoadingScans(false)
@@ -39,14 +40,12 @@ export default function Chat() {
       .finally(() => setLoadingScans(false))
   }, [user])
 
-  // Cargar vulnerabilidades del scan seleccionado (para elegir contexto puntual)
   useEffect(() => {
     if (!selectedScanId) {
       setVulnerabilities([])
       return
     }
     setLoadingVulns(true)
-    setSelectedVulnId(null)
     setMessages([])
     setSessionId(null)
 
@@ -63,20 +62,34 @@ export default function Chat() {
 
   const ensureSession = async () => {
     if (sessionId) return sessionId
-    const created = await chatbotService.createSession(selectedScanId, selectedVulnId)
+    const created = await chatbotService.createSession(selectedScanId)
     const id = created?._id ?? created?.session_id
     setSessionId(id)
     return id
   }
 
+  const handleNewChat = () => {
+    setSessionId(null)
+    setMessages([])
+  }
+
   const handleSend = async (question) => {
+    if (messagesLeft <= 0) return
+
     setMessages((prev) => [...prev, { role: 'user', content: question }])
     setSending(true)
     setBackendReady(true)
 
     try {
       const id = await ensureSession()
-      const reply = await chatbotService.sendMessage(id, question, selectedVulnId)
+      const reply = await chatbotService.sendMessage(id, question)
+
+      if (typeof reply?.messages_left === 'number') {
+        setMessagesLeft(reply.messages_left)
+      } else {
+        setMessagesLeft((prev) => Math.max(prev - 1, 0))
+      }
+
       setMessages((prev) => [
         ...prev,
         {
@@ -86,24 +99,36 @@ export default function Chat() {
         },
       ])
     } catch (err) {
-      setBackendReady(false)
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          error: true,
-          content:
-            'No se pudo conectar con el endpoint del chatbot todavía (app/routes/chatbot.py sigue en construcción). ' +
-            'El front ya queda listo para conectarse en cuanto exista.',
-        },
-      ])
+      if (err?.status === 429) {
+        setMessagesLeft(0)
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            error: true,
+            content: 'Alcanzaste el límite diario de mensajes. Probá de nuevo mañana.',
+          },
+        ])
+      } else {
+        setBackendReady(false)
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            error: true,
+            content:
+              'No se pudo conectar con el endpoint del chatbot todavía. ' +
+              'El front ya queda listo para conectarse en cuanto exista.',
+          },
+        ])
+      }
     } finally {
       setSending(false)
     }
   }
 
   const selectedScan = scans.find((s) => (s._id ?? s.scan_id) === selectedScanId)
-  const selectedVuln = vulnerabilities.find((v) => (v._id ?? v.id) === selectedVulnId)
+  const limitReached = messagesLeft <= 0
 
   return (
     <div
@@ -118,25 +143,39 @@ export default function Chat() {
         boxSizing: 'border-box',
       }}
     >
-      {/* Header */}
-      <div>
-        <h1
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 600,
+              color: 'var(--fg)',
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <MessageSquareText size={20} style={{ color: 'var(--primary)' }} />
+            Chat de seguridad
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
+            Preguntá sobre el código escaneado usando contexto real (RAG) en vez de adivinar.
+          </p>
+        </div>
+
+        <span
           style={{
-            fontSize: 22,
-            fontWeight: 600,
-            color: 'var(--fg)',
-            margin: 0,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
+            fontSize: 11,
+            fontFamily: 'var(--font-mono)',
+            color: limitReached ? 'var(--high)' : 'var(--muted)',
+            border: '1px solid var(--border)',
+            borderRadius: 999,
+            padding: '5px 10px',
           }}
         >
-          <MessageSquareText size={20} style={{ color: 'var(--primary)' }} />
-          Chat de seguridad
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
-          Preguntá sobre el código escaneado usando contexto real (RAG) en vez de adivinar.
-        </p>
+          {messagesLeft}/{DAILY_LIMIT} mensajes hoy
+        </span>
       </div>
 
       <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
@@ -145,13 +184,11 @@ export default function Chat() {
           selectedScanId={selectedScanId}
           onSelectScan={setSelectedScanId}
           vulnerabilities={vulnerabilities}
-          selectedVulnId={selectedVulnId}
-          onSelectVuln={setSelectedVulnId}
           loadingScans={loadingScans}
           loadingVulns={loadingVulns}
+          onNewChat={handleNewChat}
         />
 
-        {/* Ventana de chat */}
         <div
           style={{
             flex: 1,
@@ -164,7 +201,6 @@ export default function Chat() {
             overflow: 'hidden',
           }}
         >
-          {/* Barra de contexto activo */}
           {selectedScan && (
             <div
               style={{
@@ -178,15 +214,8 @@ export default function Chat() {
                 justifyContent: 'space-between',
               }}
             >
-              <span>
-                {selectedScan.repo_name ?? selectedScan.name}
-                {selectedVuln && (
-                  <span style={{ color: 'var(--fg)' }}> · {selectedVuln.title}</span>
-                )}
-              </span>
-              {!backendReady && (
-                <span style={{ color: 'var(--high)' }}>backend no disponible</span>
-              )}
+              <span>{selectedScan.repo_name ?? selectedScan.name}</span>
+              {!backendReady && <span style={{ color: 'var(--high)' }}>backend no disponible</span>}
             </div>
           )}
 
@@ -212,12 +241,12 @@ export default function Chat() {
           <div style={{ padding: 12, borderTop: '1px solid var(--border)' }}>
             <ChatInput
               onSubmit={handleSend}
-              disabled={!selectedScanId || sending}
+              disabled={!selectedScanId || sending || limitReached}
               placeholder={
-                !selectedScanId
+                limitReached
+                  ? 'Alcanzaste el límite diario de mensajes'
+                  : !selectedScanId
                   ? 'Elegí un scan primero...'
-                  : selectedVuln
-                  ? `Preguntá sobre "${selectedVuln.title}"...`
                   : 'Preguntá sobre este repositorio...'
               }
             />

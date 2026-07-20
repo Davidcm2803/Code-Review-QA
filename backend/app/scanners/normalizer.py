@@ -103,6 +103,186 @@ def normalize_semgrep(raw: dict, repository_id: str, scan_id: str, repo_path: st
     return normalized
 
 
+# osv-scanner (dependencias)
+
+def _resolve_osv_severity(severity_list: list) -> str:
+    # esta funcion busca el score CVSS y lo convierte a nuestra escala de severidad
+    for s in severity_list:
+        if s.get("type") in ("CVSS_V3", "CVSS_V4"):
+            score_str = s.get("score", "")
+            try:
+                score = float(score_str)
+            except (ValueError, TypeError):
+                continue
+            if score >= 9.0:
+                return "critical"
+            elif score >= 7.0:
+                return "high"
+            elif score >= 4.0:
+                return "medium"
+            else:
+                return "low"
+    return "medium"
+
+
+def _extract_fixed_versions(vuln: dict) -> list:
+    # esta funcion junta todas las versiones donde ya se arreglo la vulnerabilidad
+    fixed = []
+    for affected in vuln.get("affected", []):
+        for r in affected.get("ranges", []):
+            for event in r.get("events", []):
+                if event.get("fixed"):
+                    fixed.append(event["fixed"])
+    return fixed
+
+
+def normalize_osv(raw: dict, repository_id: str, scan_id: str) -> List[Dict[str, Any]]:
+    # esta funcion convierte el resultado de osv-scanner al schema de MongoDB
+    normalized = []
+
+    for result in raw.get("results", []):
+        manifest_path = result.get("source", {}).get("path", "unknown")
+
+        for pkg_entry in result.get("packages", []):
+            pkg = pkg_entry.get("package", {})
+            pkg_name = pkg.get("name", "unknown")
+            pkg_version = pkg.get("version", "")
+            pkg_ref = f"{pkg_name}@{pkg_version}" if pkg_version else pkg_name
+
+            for vuln in pkg_entry.get("vulnerabilities", []):
+                vuln_id = vuln.get("id", "UNKNOWN-CVE")
+                severity = _resolve_osv_severity(vuln.get("severity", []))
+                fixed_versions = _extract_fixed_versions(vuln)
+                summary = (vuln.get("summary") or vuln.get("details", "") or "Sin descripcion disponible.")
+
+                aliases = vuln.get("aliases", [])
+                alias_str = f" ({', '.join(aliases)})" if aliases else ""
+
+                remediation = (
+                    f"Actualizar {pkg_name} a la version {fixed_versions[0]} o superior."
+                    if fixed_versions
+                    else f"No hay fix publicado aun para {pkg_name}. Monitorear el advisory."
+                )
+                remediation += f" Detalle: https://osv.dev/vulnerability/{vuln_id}"
+
+                normalized.append({
+                    "scan_id":                    scan_id,
+                    "repository_id":              repository_id,
+                    "title":                      f"{vuln_id} en {pkg_ref}{alias_str}"[:200],
+                    "description":                summary[:500],
+                    "severity":                   severity,
+                    "detector_source":            "osv-scanner",
+                    "file_path":                  manifest_path,
+                    "line_start":                 0,
+                    "line_end":                   0,
+                    "vulnerable_code":            pkg_ref,
+                    "remediation_recommendation": remediation,
+                    "status":                     "open",
+                })
+
+    return normalized
+
+
+# gitleaks (secretos)
+
+def _redact_secret(match: str, secret: str) -> str:
+    # esta funcion enmascara el secreto real para no guardarlo en texto plano en Mongo
+    if not secret:
+        return match[:80]
+    if len(secret) <= 8:
+        masked = "*" * len(secret)
+    else:
+        masked = secret[:4] + "*" * (len(secret) - 8) + secret[-4:]
+    return match.replace(secret, masked)[:200]
+
+
+def normalize_gitleaks(raw: list, repository_id: str, scan_id: str, repo_path: str) -> List[Dict[str, Any]]:
+    # esta funcion convierte el resultado de gitleaks al schema de MongoDB
+    normalized = []
+
+    for item in raw:
+        rule_id = item.get("RuleID", "unknown-rule")
+        secret = item.get("Secret", "")
+        match = item.get("Match", "")
+        file_path = item.get("File", "")
+
+        rel_path = _strip_repo_path(file_path.replace("\\", "/"), repo_path)
+
+        vuln = {
+            "scan_id":                    scan_id,
+            "repository_id":              repository_id,
+            "title":                      f"Secreto expuesto: {rule_id}",
+            "description":                (
+                f"Se detecto un posible secreto de tipo '{rule_id}' expuesto en el codigo. "
+                f"Commit: {item.get('Commit', 'N/A')[:12] if item.get('Commit') else 'N/A'}."
+            ),
+            "severity":                   "critical",
+            "detector_source":            "gitleaks",
+            "file_path":                  rel_path,
+            "line_start":                 item.get("StartLine", 0),
+            "line_end":                   item.get("EndLine", item.get("StartLine", 0)),
+            "vulnerable_code":            _redact_secret(match, secret),
+            "remediation_recommendation": (
+                "Revocar y rotar esta credencial inmediatamente en el proveedor correspondiente. "
+                "Eliminar del codigo y mover a variables de entorno o a un gestor de secretos "
+                "(Vault, AWS Secrets Manager, etc). Si el repo es publico o el secreto llego a "
+                "un commit, considerar la credencial comprometida aunque se elimine del codigo."
+            ),
+            "status":                     "open",
+        }
+        normalized.append(vuln)
+
+    return normalized
+
+
+# checkov (IaC)
+
+def _resolve_checkov_severity(check_id: str, guideline: str) -> str:
+    # esta funcion asigna severidad porque checkov no siempre trae un campo severity usable
+    high_risk_prefixes = ("CKV_DOCKER", "CKV_K8S", "CKV_AWS")
+    if check_id.startswith(high_risk_prefixes):
+        return "high"
+    return "medium"
+
+
+def normalize_checkov(raw: dict, repository_id: str, scan_id: str, repo_path: str) -> List[Dict[str, Any]]:
+    # esta funcion convierte el resultado de checkov al schema de MongoDB
+    failed_checks = raw.get("results", {}).get("failed_checks", [])
+    normalized = []
+
+    for item in failed_checks:
+        check_id = item.get("check_id", "unknown-check")
+        file_path = item.get("file_path", "")
+        file_line_range = item.get("file_line_range", [0, 0])
+        guideline = item.get("guideline", "")
+
+        vuln = {
+            "scan_id":                    scan_id,
+            "repository_id":              repository_id,
+            "title":                      item.get("check_name", "Configuracion insegura detectada")[:200],
+            "description":                (
+                f"Regla: {check_id}. Recurso: {item.get('resource', 'N/A')}. "
+                f"Archivo: {file_path}."
+            ),
+            "severity":                   _resolve_checkov_severity(check_id, guideline),
+            "detector_source":            "checkov",
+            "file_path":                  _strip_repo_path(file_path.replace("\\", "/"), repo_path),
+            "line_start":                 file_line_range[0] if file_line_range else 0,
+            "line_end":                   file_line_range[-1] if file_line_range else 0,
+            "vulnerable_code":            "",
+            "remediation_recommendation": (
+                f"Revisar la configuracion de '{item.get('resource', 'N/A')}' segun la guia de la regla {check_id}."
+                + (f" Mas info: {guideline}" if guideline else "")
+            ),
+            "status":                     "open",
+        }
+        normalized.append(vuln)
+
+    return normalized
+
+
+# --- helpers compartidos entre detectores ---
+
 def _extract_snippet(file_path: str, start_line: int, end_line: int) -> str:
     # Semgrep  requiere login
     if not file_path or not start_line:
