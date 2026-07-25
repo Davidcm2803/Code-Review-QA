@@ -20,7 +20,12 @@ passlib[bcrypt]
 PyGithub
 httpx
 
-#Frameworks
+# Frameworks
 Bandit
 semgrep
 checkov
+
+# RAG
+groq
+sentence-transformers
+numpy

@@ -4,8 +4,8 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   GithubAuthProvider,
-  fetchSignInMethodsForEmail,
   linkWithCredential,
+  linkWithPopup,
   signOut,
 } from 'firebase/auth'
 
@@ -22,9 +22,12 @@ const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 
 const googleProvider = new GoogleAuthProvider()
+googleProvider.setCustomParameters({ prompt: 'select_account' })
+
 const githubProvider = new GithubAuthProvider()
 githubProvider.addScope('repo')
 githubProvider.addScope('read:user')
+githubProvider.setCustomParameters({ allow_signup: 'true' })
 
 function buildUserPayload(user, provider, githubToken = null) {
   return {
@@ -80,9 +83,29 @@ export async function loginWithGoogle() {
     if (existingProvider === 'github.com') {
       const githubResult = await signInWithPopup(auth, githubProvider)
       await linkWithCredential(githubResult.user, pendingCredential)
-      return buildUserPayload(githubResult.user, 'google')
+
+      const linkedCredential = GithubAuthProvider.credentialFromResult(githubResult)
+      const githubToken = linkedCredential?.accessToken
+      if (githubToken) localStorage.setItem('github_token', githubToken)
+
+      return buildUserPayload(githubResult.user, 'google', githubToken)
     }
 
+    throw error
+  }
+}
+
+export async function connectGitHub() {
+  try {
+    const result = await signInWithPopup(auth, githubProvider)
+    const credential = GithubAuthProvider.credentialFromResult(result)
+    const githubToken = credential?.accessToken
+    if (githubToken) localStorage.setItem('github_token', githubToken)
+    return githubToken
+  } catch (error) {
+    if (error.code === 'auth/account-exists-with-different-credential') {
+      throw new Error('Esa cuenta de GitHub ya está asociada a otro método de acceso.')
+    }
     throw error
   }
 }

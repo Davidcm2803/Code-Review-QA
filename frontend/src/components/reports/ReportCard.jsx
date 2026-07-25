@@ -1,33 +1,52 @@
-import { GitBranch, Calendar, AlertTriangle, ChevronDown, Download } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { GitBranch, Calendar, AlertTriangle, ChevronDown, Download, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import SeverityBadge from './SeverityBadge'
+import ReportPrintable from './ReportPrintable'
 import { formatDate } from '../../lib/date'
+import { scanService } from '../../config/Api'
+import { exportNodeToPdf } from '../../lib/pdf'
 
 const ORDER = ['critical', 'high', 'medium', 'low']
 
 export default function ReportCard({ report }) {
   const navigate = useNavigate()
+  const printRef = useRef(null)
+  const [exporting, setExporting] = useState(false)
+  const [fullReport, setFullReport] = useState(null)
 
   const {
     scan_id,
     repo_name,
-    branch       = 'main',
+    branch = 'main',
     status,
     total_issues = 0,
-    severities   = [],
+    severities = [],
     completed_at,
     started_at,
-    pdf_url,
   } = report
 
   const clean = total_issues === 0 && status === 'completed'
-
   const sortedSeverities = [...severities].sort(
     (a, b) => ORDER.indexOf(a) - ORDER.indexOf(b)
   )
 
   const handleViewDetails = () => navigate(`/scan/${scan_id}/results`)
-  const handleDownloadPdf = () => { if (pdf_url) window.open(pdf_url, '_blank') }
+
+  const handleDownloadPdf = async () => {
+    if (status !== 'completed') return
+    setExporting(true)
+    try {
+      const results = await scanService.getResults(scan_id)
+      setFullReport({ ...report, ...results })
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      await exportNodeToPdf(printRef.current, `${repo_name}-report`)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div
@@ -41,7 +60,6 @@ export default function ReportCard({ report }) {
         gap: 8,
       }}
     >
-
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -59,7 +77,7 @@ export default function ReportCard({ report }) {
 
         <button
           onClick={handleDownloadPdf}
-          disabled={!pdf_url}
+          disabled={exporting || status !== 'completed'}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -71,11 +89,11 @@ export default function ReportCard({ report }) {
             color: 'var(--muted)',
             fontSize: 11,
             fontWeight: 600,
-            cursor: pdf_url ? 'pointer' : 'not-allowed',
+            cursor: exporting ? 'wait' : status !== 'completed' ? 'not-allowed' : 'pointer',
           }}
         >
-          <Download size={12} />
-          PDF
+          {exporting ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+          {exporting ? 'Generando...' : 'PDF'}
         </button>
       </div>
 
@@ -92,7 +110,6 @@ export default function ReportCard({ report }) {
           ))}
         </div>
       )}
-
 
       <button
         onClick={handleViewDetails}
@@ -113,6 +130,12 @@ export default function ReportCard({ report }) {
         <ChevronDown size={12} />
         View Details
       </button>
+
+      {fullReport && (
+        <div style={{ position: 'absolute', left: -9999, top: 0 }}>
+          <ReportPrintable ref={printRef} report={fullReport} />
+        </div>
+      )}
     </div>
   )
 }

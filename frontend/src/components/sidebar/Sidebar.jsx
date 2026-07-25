@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { AuthModal } from '../layout/AuthModal'
 import { useAuth } from '../../context/AuthContext'
+import ConnectGithubButton from '../settings/ConnectGithubButton'
 
 export const NAV = [
   { href: '/',         label: 'Dashboard', icon: LayoutDashboard },
@@ -60,6 +61,10 @@ const S = {
     background: active ? 'rgba(34,197,94,0.12)' : 'transparent',
     color: active ? '#22c55e' : '#5a6b60',
     transition: 'background 0.12s, color 0.12s',
+  }),
+  connectGithubRow: (collapsed) => ({
+    padding: collapsed ? '8px 6px' : '8px 10px',
+    borderTop: '1px solid #1e2420',
   }),
   authRow: (collapsed) => ({
     display: 'flex', alignItems: 'center', gap: 8,
@@ -147,6 +152,11 @@ const S = {
   }),
 }
 
+function needsGithubConnect(user) {
+  if (!user) return false
+  return user.provider === 'google' && !localStorage.getItem('github_token')
+}
+
 function MobileNav({ user, logout, onOpenModal }) {
   const { pathname } = useLocation()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -201,20 +211,27 @@ function MobileNav({ user, logout, onOpenModal }) {
 
             <div style={{ borderTop: '1px solid #1e2420', marginTop: 8, paddingTop: 8 }}>
               {user ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px' }}>
-                  {user.photo
-                    ? <img src={user.photo} alt={user.name} style={S.avatar} />
-                    : <div style={S.avatarFallback}><User size={13} color="#22c55e" /></div>
-                  }
-                  <span style={{ ...S.username, fontSize: 13 }}>{user.name}</span>
-                  <button
-                    style={S.logoutBtn(false)}
-                    onClick={() => { logout(); setDrawerOpen(false) }}
-                    title="Cerrar sesión"
-                  >
-                    <LogOut size={16} />
-                  </button>
-                </div>
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px' }}>
+                    {user.photo
+                      ? <img src={user.photo} alt={user.name} style={S.avatar} />
+                      : <div style={S.avatarFallback}><User size={13} color="#22c55e" /></div>
+                    }
+                    <span style={{ ...S.username, fontSize: 13 }}>{user.name}</span>
+                    <button
+                      style={S.logoutBtn(false)}
+                      onClick={() => { logout(); setDrawerOpen(false) }}
+                      title="Cerrar sesión"
+                    >
+                      <LogOut size={16} />
+                    </button>
+                  </div>
+                  {needsGithubConnect(user) && (
+                    <div style={{ padding: '0 12px 8px' }}>
+                      <ConnectGithubButton />
+                    </div>
+                  )}
+                </>
               ) : (
                 <button
                   style={{ ...S.loginBtn(false, false), width: '100%' }}
@@ -271,6 +288,12 @@ function DesktopSidebar({ user, logout, onOpenModal }) {
           )
         })}
       </nav>
+
+      {user && needsGithubConnect(user) && !collapsed && (
+        <div style={S.connectGithubRow(collapsed)}>
+          <ConnectGithubButton />
+        </div>
+      )}
 
       <div style={S.authRow(collapsed)}>
         {user ? (

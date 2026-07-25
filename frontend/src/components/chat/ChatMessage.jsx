@@ -1,4 +1,6 @@
 import { Bot, User, AlertTriangle } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export default function ChatMessage({ role, content, error, chunksUsed }) {
   const isUser = role === 'user'
@@ -36,6 +38,7 @@ export default function ChatMessage({ role, content, error, chunksUsed }) {
 
       <div style={{ maxWidth: '78%', display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div
+          className="chat-markdown"
           style={{
             fontSize: 13,
             lineHeight: 1.5,
@@ -43,7 +46,6 @@ export default function ChatMessage({ role, content, error, chunksUsed }) {
             borderRadius: 10,
             borderBottomRightRadius: isUser ? 2 : 10,
             borderBottomLeftRadius: isUser ? 10 : 2,
-            whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
             background: isUser
               ? 'var(--primary)'
@@ -58,7 +60,11 @@ export default function ChatMessage({ role, content, error, chunksUsed }) {
               : '1px solid var(--border)',
           }}
         >
-          {content}
+          {isUser ? (
+            <span style={{ whiteSpace: 'pre-wrap' }}>{content}</span>
+          ) : (
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          )}
         </div>
 
         {!isUser && chunksUsed?.length > 0 && (

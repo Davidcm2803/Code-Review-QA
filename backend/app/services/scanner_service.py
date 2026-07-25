@@ -22,7 +22,6 @@ MAX_PASTE_LINES = 500             # max lineas para paste
 
 
 def _to_object_id(id_str: str) -> ObjectId:
-    # Convierte a ObjectId o levanta ValueError con alert
     try:
         return ObjectId(id_str)
     except (InvalidId, TypeError):
@@ -30,7 +29,6 @@ def _to_object_id(id_str: str) -> ObjectId:
 
 
 async def _emit_event(db, scan_id: str, event_type: str, message: str):
-    # inserta evento de progreso
     await db["scan_events"].insert_one({
         "scan_id":    scan_id,
         "type":       event_type,
@@ -40,7 +38,6 @@ async def _emit_event(db, scan_id: str, event_type: str, message: str):
 
 
 async def _create_repo_and_scan(db, user_id: str, repo_name: str, source_type: str, extra_repo_fields: dict = None):
-    # crea repo y scan en running
     now = datetime.now(timezone.utc)
     repo_doc = {
         "_id":         ObjectId(),
@@ -73,12 +70,11 @@ async def _create_repo_and_scan(db, user_id: str, repo_name: str, source_type: s
     return repository_id, scan_id
 
 
-async def start_scan(clone_url: str, branch: str, repo_name: str, user_id: str) -> str:
+async def start_scan(clone_url: str, branch: str, repo_name: str, user_id: str, github_token: str | None = None) -> str:
     # scan de repo github
     db = get_db()
     now = datetime.now(timezone.utc)
 
-    # upsert repo, reusa doc si ya existe para este user+url
     repo_doc = await db["repositories"].find_one_and_update(
         {"user_id": user_id, "github_url": clone_url},
         {"$setOnInsert": {
@@ -113,13 +109,11 @@ async def start_scan(clone_url: str, branch: str, repo_name: str, user_id: str) 
     })
     await db["repositories"].update_one({"_id": repo_doc["_id"]}, {"$set": {"last_scan_id": scan_id_obj}})
 
-    # corre scan en background
-    asyncio.create_task(_run_scan_task(db, scan_id, repository_id, clone_url, branch, repo_name))
+    asyncio.create_task(_run_scan_task(db, scan_id, repository_id, clone_url, branch, repo_name, github_token))
     return scan_id
 
 
 async def start_scan_from_upload(files: list[UploadFile], user_id: str) -> str:
-    # scan de archivos subidos desde upload
     if not files:
         raise ValueError("No se recibieron archivos")
     if len(files) > MAX_FILES:
@@ -146,7 +140,6 @@ async def start_scan_from_upload(files: list[UploadFile], user_id: str) -> str:
 
 
 async def start_scan_from_paste(code: str, filename: str, user_id: str) -> str:
-    # scan de codigo pegado
     lines = code.splitlines()
     if not lines:
         raise ValueError("El codigo esta vacio")
@@ -167,7 +160,6 @@ async def start_scan_from_paste(code: str, filename: str, user_id: str) -> str:
 
 
 async def _finalize_scan(db, scan_id: str, vulns: list[dict]):
-    # guarda vulns, calcula metricas y marca completado
     if vulns:
         now = datetime.now(timezone.utc)
         for v in vulns:
@@ -201,7 +193,6 @@ async def _finalize_scan(db, scan_id: str, vulns: list[dict]):
 
 
 async def _mark_scan_failed(db, scan_id: str, error: Exception):
-    # marca scan failed y loguea error
     logger.error(f"Scan {scan_id} fallo: {error}", exc_info=True)
     await db["scans"].update_one(
         {"_id": ObjectId(scan_id)},
@@ -210,14 +201,13 @@ async def _mark_scan_failed(db, scan_id: str, error: Exception):
     await _emit_event(db, scan_id, "failed", f"Error durante el scan: {str(error)}")
 
 
-async def _run_scan_task(db, scan_id: str, repository_id: str, clone_url: str, branch: str, repo_name: str):
-    # flujo completo para repos github clona escanea guarda
+async def _run_scan_task(db, scan_id: str, repository_id: str, clone_url: str, branch: str, repo_name: str, github_token: str | None = None):
     repo_path = None
     try:
         await _emit_event(db, scan_id, "progress", f"Clonando {repo_name} rama {branch}...")
 
         loop = asyncio.get_event_loop()
-        repo_path = await loop.run_in_executor(None, fetch_repo, clone_url, branch)
+        repo_path = await loop.run_in_executor(None, fetch_repo, clone_url, branch, github_token)
 
         await _emit_event(db, scan_id, "progress", "Detectando lenguajes y ejecutando scanners...")
         vulns = await loop.run_in_executor(None, run_scan, repo_path, repository_id, scan_id)
@@ -233,7 +223,6 @@ async def _run_scan_task(db, scan_id: str, repository_id: str, clone_url: str, b
 
 
 async def _run_scan_task_from_files(db, scan_id: str, repository_id: str, files: list[tuple[str, bytes]]):
-    # flujo completo para archivos subidos o pegados sin git
     repo_path = None
     try:
         await _emit_event(db, scan_id, "progress", f"Preparando {len(files)} archivo(s)...")
@@ -255,8 +244,6 @@ async def _run_scan_task_from_files(db, scan_id: str, repository_id: str, files:
 
 
 async def get_scan_status(scan_id: str, user_id: str) -> dict | None:
-    # devuelve estado actual y ultimo mensaje
-    # Filtra por user_id ademas de _id
     db = get_db()
     try:
         oid = _to_object_id(scan_id)
@@ -284,7 +271,6 @@ async def get_scan_status(scan_id: str, user_id: str) -> dict | None:
 
 
 async def get_scan_results(scan_id: str, user_id: str) -> dict | None:
-    # devuelve scan completo con sus vulns, solo si pertenece al user_id
     db = get_db()
     try:
         oid = _to_object_id(scan_id)
@@ -316,7 +302,6 @@ async def get_scan_results(scan_id: str, user_id: str) -> dict | None:
 
 
 async def get_latest_scan(user_id: str) -> dict | None:
-    # devuelve el ultimo scan completado del usuario ya con sus vulns
     db = get_db()
     scan = await db["scans"].find_one(
         {"user_id": user_id, "status": "completed"},
@@ -328,9 +313,6 @@ async def get_latest_scan(user_id: str) -> dict | None:
 
 
 async def get_vulnerability(scan_id: str, vuln_id: str, user_id: str) -> dict | None:
-    # devuelve una vulnerabilidad puntual, validando que el scan padre
-    # Pensado para el flujo de chat/RAG: el frontend pide detalle de UNA validar si mas para mas contexto
-    # vulnerabilidad sin traer todo el scan.
     db = get_db()
     try:
         scan_oid = _to_object_id(scan_id)

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { githubApi, api } from "../config/Api";
+import { githubApi, api, scanService } from "../config/Api";
 import { useAuth } from "../context/AuthContext";
 import RepoInput from "../components/scan/RepoInput";
 import RecentRepos from "../components/scan/RecentRepos";
@@ -104,7 +104,7 @@ export default function ScanRepository() {
     setScanning(true);
     setProgress(2);
     try {
-      const { scan_id } = await api.post("/api/scan/start", {
+      const { scan_id } = await scanService.startFromGithub({
         clone_url: url,
         branch,
       });

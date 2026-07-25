@@ -128,7 +128,11 @@ export const AuthModal = ({ onClose }) => {
       const { token, user } = await authService.oauth(firebaseUser)
       localStorage.setItem('token', token)
 
-      login({ ...user, ...(githubToken ? { githubToken } : {}) })
+      login({
+        ...user,
+        provider: firebaseUser.provider,
+        ...(githubToken ? { githubToken } : {}),
+      })
       onClose?.()
     } catch (err) {
       setError(err?.message ?? 'Error al iniciar sesión.')

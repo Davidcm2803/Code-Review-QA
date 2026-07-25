@@ -9,7 +9,8 @@ db.createUser({
   roles: [{ role: "readWrite", db: "ai_secure_qa" }]
 });
 
-
+db.createCollection("rag_usage");
+db.rag_usage.createIndex({ user_id: 1, date: 1 }, { unique: true });
 
 // users 
 // email unico para evitar duplicados en registro manual 

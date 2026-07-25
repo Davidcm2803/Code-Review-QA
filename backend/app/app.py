@@ -1,3 +1,6 @@
+import logging
+import traceback
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,10 +10,14 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.routes.auth import router as auth_router
 from app.routes.github import router as github_router
-from app.routes.scan import router as scan_router       
+from app.routes.scan import router as scan_router
 from app.database.connection import connect_db, close_db
+from app.routes import chatbot
 
 CORS_ORIGIN = "http://localhost:5173"
+
+logger = logging.getLogger("uvicorn.error")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -48,9 +55,20 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.error("Unhandled exception on %s %s\n%s", request.method, request.url, traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servidor"},
+        headers={"Access-Control-Allow-Origin": CORS_ORIGIN},
+    )
+
+
 app.include_router(auth_router)
 app.include_router(github_router)
-app.include_router(scan_router)                            
+app.include_router(scan_router)
+app.include_router(chatbot.router)
 
 
 @app.get("/health")

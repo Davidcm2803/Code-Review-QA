@@ -20,6 +20,10 @@ export default function Chat() {
   const [vulnerabilities, setVulnerabilities] = useState([])
   const [loadingVulns, setLoadingVulns] = useState(false)
 
+  const [sessions, setSessions] = useState([])
+  const [loadingSessions, setLoadingSessions] = useState(false)
+  const [loadingHistory, setLoadingHistory] = useState(false)
+
   const [sessionId, setSessionId] = useState(null)
   const [messages, setMessages] = useState([])
   const [sending, setSending] = useState(false)
@@ -40,9 +44,26 @@ export default function Chat() {
       .finally(() => setLoadingScans(false))
   }, [user])
 
+  const refreshSessions = async (scanId) => {
+    if (!scanId) {
+      setSessions([])
+      return
+    }
+    setLoadingSessions(true)
+    try {
+      const data = await chatbotService.listSessions(scanId)
+      setSessions(Array.isArray(data) ? data : [])
+    } catch {
+      setSessions([])
+    } finally {
+      setLoadingSessions(false)
+    }
+  }
+
   useEffect(() => {
     if (!selectedScanId) {
       setVulnerabilities([])
+      setSessions([])
       return
     }
     setLoadingVulns(true)
@@ -54,6 +75,8 @@ export default function Chat() {
       .then((data) => setVulnerabilities(data?.vulnerabilities ?? []))
       .catch(() => setVulnerabilities([]))
       .finally(() => setLoadingVulns(false))
+
+    refreshSessions(selectedScanId)
   }, [selectedScanId])
 
   useEffect(() => {
@@ -73,8 +96,31 @@ export default function Chat() {
     setMessages([])
   }
 
+  const handleSelectSession = async (id) => {
+    if (id === sessionId) return
+    setSessionId(id)
+    setLoadingHistory(true)
+    try {
+      const data = await chatbotService.getMessages(id)
+      const mapped = (Array.isArray(data) ? data : []).map((m) => ({
+        role: m.role,
+        content: m.content,
+        chunksUsed: m.rag_chunks_used,
+      }))
+      setMessages(mapped)
+    } catch {
+      setMessages([
+        { role: 'assistant', error: true, content: 'No se pudo cargar esta conversación.' },
+      ])
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
   const handleSend = async (question) => {
     if (messagesLeft <= 0) return
+
+    const isNewSession = !sessionId
 
     setMessages((prev) => [...prev, { role: 'user', content: question }])
     setSending(true)
@@ -98,6 +144,8 @@ export default function Chat() {
           chunksUsed: reply?.rag_chunks_used,
         },
       ])
+
+      if (isNewSession) refreshSessions(selectedScanId)
     } catch (err) {
       if (err?.status === 429) {
         setMessagesLeft(0)
@@ -187,6 +235,10 @@ export default function Chat() {
           loadingScans={loadingScans}
           loadingVulns={loadingVulns}
           onNewChat={handleNewChat}
+          sessions={sessions}
+          loadingSessions={loadingSessions}
+          activeSessionId={sessionId}
+          onSelectSession={handleSelectSession}
         />
 
         <div
@@ -230,7 +282,9 @@ export default function Chat() {
               gap: 12,
             }}
           >
-            {messages.length === 0 ? (
+            {loadingHistory ? (
+              <TypingIndicator />
+            ) : messages.length === 0 ? (
               <EmptyChatState hasScan={!!selectedScanId} />
             ) : (
               messages.map((m, i) => <ChatMessage key={i} {...m} />)

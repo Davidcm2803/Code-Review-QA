@@ -9,7 +9,7 @@ export function AuthProvider({ children }) {
   })
 
   const login = (userData) => {
-    if (userData.provider === 'github' && userData.githubToken) {
+    if (userData.githubToken) {
       localStorage.setItem('github_token', userData.githubToken)
     }
     localStorage.setItem('user', JSON.stringify(userData))

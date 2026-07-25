@@ -1,4 +1,4 @@
-import { GitBranch, ShieldAlert, RefreshCw } from 'lucide-react'
+import { GitBranch, ShieldAlert, RefreshCw, Check, History, MessageSquare } from 'lucide-react'
 import Card from '../layout/Card'
 
 const SEVERITY_COLORS = {
@@ -15,6 +15,20 @@ function severityCounts(vulns) {
   }, {})
 }
 
+function formatSessionDate(iso) {
+  if (!iso) return ''
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return ''
+  }
+}
+
 export default function ContextPanel({
   scans,
   selectedScanId,
@@ -23,13 +37,133 @@ export default function ContextPanel({
   loadingScans,
   loadingVulns,
   onNewChat,
+  sessions = [],
+  loadingSessions = false,
+  activeSessionId,
+  onSelectSession,
 }) {
   const counts = severityCounts(vulnerabilities)
   const total = vulnerabilities.length
+  const selectedScan = scans.find((s) => (s._id ?? s.scan_id) === selectedScanId)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: 280, flexShrink: 0 }}>
-      <Card title="Repositorio">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: 280, flexShrink: 0 }}>
+      {/* Repo activo — lo que el LLM va a usar como contexto */}
+      <div
+        style={{
+          background: 'var(--card)',
+          border: '1px solid var(--border)',
+          borderRadius: 12,
+          padding: '12px 14px',
+        }}
+      >
+        <p
+          style={{
+            fontSize: 11,
+            color: 'var(--muted)',
+            margin: '0 0 8px',
+            textTransform: 'uppercase',
+            letterSpacing: 0.4,
+          }}
+        >
+          Repositorio activo
+        </p>
+
+        {loadingScans ? (
+          <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>Cargando...</p>
+        ) : !selectedScan ? (
+          <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0, lineHeight: 1.5 }}>
+            Elegí un repositorio abajo para empezar a chatear sobre sus hallazgos.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 8,
+                background: 'color-mix(in srgb, var(--primary) 14%, var(--card))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <GitBranch size={14} style={{ color: 'var(--primary)' }} />
+            </div>
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--fg)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {selectedScan.repo_name ?? selectedScan.name}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Hallazgos disponibles como contexto */}
+      {selectedScanId && !loadingVulns && total > 0 && (
+        <div
+          style={{
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            padding: '12px 14px',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 12,
+              color: 'var(--fg)',
+              marginBottom: 8,
+            }}
+          >
+            <ShieldAlert size={13} style={{ color: 'var(--primary)' }} />
+            {total} hallazgo{total !== 1 ? 's' : ''} como contexto
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {Object.entries(counts).map(([sev, n]) => (
+              <span
+                key={sev}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  fontSize: 11,
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--fg)',
+                  background: 'var(--secondary)',
+                  borderRadius: 999,
+                  padding: '3px 9px',
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: SEVERITY_COLORS[sev] ?? 'var(--muted)',
+                  }}
+                />
+                {n} {sev}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Selector de repos */}
+      <Card title="Elegir repositorio">
         {loadingScans ? (
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>Cargando scans...</p>
         ) : scans.length === 0 ? (
@@ -37,7 +171,7 @@ export default function ContextPanel({
             No hay scans todavía. Corré uno primero.
           </p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {scans.map((s) => {
               const id = s._id ?? s.scan_id
               const active = id === selectedScanId
@@ -50,25 +184,20 @@ export default function ContextPanel({
                     alignItems: 'center',
                     gap: 8,
                     textAlign: 'left',
-                    padding: '9px 10px',
+                    padding: '8px 9px',
                     borderRadius: 8,
-                    border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                    background: active
-                      ? 'color-mix(in srgb, var(--primary) 12%, var(--card))'
-                      : 'var(--card)',
+                    border: 'none',
+                    background: active ? 'var(--secondary)' : 'transparent',
                     cursor: 'pointer',
-                    transition: 'border-color .15s, background .15s',
                   }}
                 >
-                  <GitBranch
-                    size={13}
-                    style={{ color: active ? 'var(--primary)' : 'var(--muted)', flexShrink: 0 }}
-                  />
+                  <GitBranch size={12} style={{ color: 'var(--muted)', flexShrink: 0 }} />
                   <span
                     style={{
+                      flex: 1,
                       fontSize: 12,
                       fontFamily: 'var(--font-mono)',
-                      color: 'var(--fg)',
+                      color: active ? 'var(--fg)' : 'var(--muted)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -76,75 +205,13 @@ export default function ContextPanel({
                   >
                     {s.repo_name ?? s.name ?? 'scan sin nombre'}
                   </span>
+                  {active && <Check size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} />}
                 </button>
               )
             })}
           </div>
         )}
       </Card>
-
-      {selectedScanId && (
-        <Card title="Contexto del chat">
-          {loadingVulns ? (
-            <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>Indexando hallazgos...</p>
-          ) : total === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
-              Este scan no tiene vulnerabilidades.
-            </p>
-          ) : (
-            <>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontSize: 12,
-                  color: 'var(--fg)',
-                  marginBottom: 10,
-                }}
-              >
-                <ShieldAlert size={13} style={{ color: 'var(--primary)' }} />
-                {total} hallazgo{total !== 1 ? 's' : ''} disponibles como contexto
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {Object.entries(counts).map(([sev, n]) => (
-                  <span
-                    key={sev}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      fontSize: 11,
-                      fontFamily: 'var(--font-mono)',
-                      color: 'var(--fg)',
-                      background: 'var(--secondary)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 999,
-                      padding: '3px 9px',
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: '50%',
-                        background: SEVERITY_COLORS[sev] ?? 'var(--muted)',
-                      }}
-                    />
-                    {n} {sev}
-                  </span>
-                ))}
-              </div>
-
-              <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 10, marginBottom: 0, lineHeight: 1.4 }}>
-                El asistente busca automáticamente los hallazgos más relevantes para
-                cada pregunta — no hace falta elegir uno.
-              </p>
-            </>
-          )}
-        </Card>
-      )}
 
       {selectedScanId && (
         <button
@@ -165,6 +232,80 @@ export default function ContextPanel({
         >
           <RefreshCw size={12} /> Nueva conversación
         </button>
+      )}
+
+      {selectedScanId && (
+        <Card title="Historial">
+          {loadingSessions ? (
+            <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>Cargando...</p>
+          ) : sessions.length === 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0, lineHeight: 1.5 }}>
+              Todavía no hay conversaciones guardadas para este repositorio.
+            </p>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
+                maxHeight: 220,
+                overflowY: 'auto',
+              }}
+            >
+              {sessions.map((s) => {
+                const id = s._id ?? s.session_id
+                const active = id === activeSessionId
+                return (
+                  <button
+                    key={id}
+                    onClick={() => onSelectSession(id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 8,
+                      textAlign: 'left',
+                      padding: '8px 9px',
+                      borderRadius: 8,
+                      border: 'none',
+                      background: active ? 'var(--secondary)' : 'transparent',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <MessageSquare
+                      size={12}
+                      style={{ color: active ? 'var(--primary)' : 'var(--muted)', flexShrink: 0, marginTop: 2 }}
+                    />
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span
+                        style={{
+                          display: 'block',
+                          fontSize: 12,
+                          color: active ? 'var(--fg)' : 'var(--muted)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {s.title || 'Conversación'}
+                      </span>
+                      <span
+                        style={{
+                          display: 'block',
+                          fontSize: 10,
+                          fontFamily: 'var(--font-mono)',
+                          color: 'var(--muted)',
+                          marginTop: 2,
+                        }}
+                      >
+                        {formatSessionDate(s.created_at)}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </Card>
       )}
     </div>
   )

@@ -20,7 +20,11 @@ RUN curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS
 WORKDIR /app
 
 COPY requirements.txt .
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Descarga y cachea el modelo de embeddings durante el build
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
 COPY . .
 
