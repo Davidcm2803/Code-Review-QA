@@ -17,8 +17,10 @@ def _vulnerability_to_text(v: dict) -> str:
     return "\n".join(parts)
 
 
-async def index_repository_vulnerabilities(db, repository_id: ObjectId, scan_id: ObjectId) -> int:
-    existing = await db.code_embeddings.count_documents({"repository_id": repository_id})
+async def index_repository_vulnerabilities(db, repository_id: ObjectId, scan_id: str) -> int:
+    existing = await db.code_embeddings.count_documents(
+        {"repository_id": repository_id, "scan_id": scan_id}
+    )
     if existing > 0:
         return 0
 
@@ -27,11 +29,12 @@ async def index_repository_vulnerabilities(db, repository_id: ObjectId, scan_id:
         return 0
 
     texts = [_vulnerability_to_text(v) for v in vulns]
-    vectors = embed_batch(texts)
+    vectors = await embed_batch(texts)
 
     docs = [
         {
             "repository_id": repository_id,
+            "scan_id": scan_id,
             "file_path": v.get("file_path", "desconocido"),
             "chunk_index": i,
             "chunk_text": texts[i],
@@ -44,5 +47,5 @@ async def index_repository_vulnerabilities(db, repository_id: ObjectId, scan_id:
     ]
 
     await db.code_embeddings.insert_many(docs)
-    logger.info(f"Indexadas {len(docs)} vulnerabilidades para repo {repository_id}")
+    logger.info(f"Indexadas {len(docs)} vulnerabilidades para repo {repository_id} scan {scan_id}")
     return len(docs)

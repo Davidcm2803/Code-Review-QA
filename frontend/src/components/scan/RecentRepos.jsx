@@ -18,7 +18,7 @@ export default function RecentRepos({ repos, loading, hasGithub, onSelect }) {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar repositorio..."
+            placeholder="Search repository..."
             style={{
               width: '100%', height: 38, background: 'var(--input)', border: '1px solid var(--border)',
               borderRadius: 8, color: 'var(--fg)', fontSize: 13, paddingLeft: 36, paddingRight: 12,
@@ -38,7 +38,7 @@ export default function RecentRepos({ repos, loading, hasGithub, onSelect }) {
       )}
       {!loading && !hasGithub && (
         <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
-          Conectá tu cuenta de GitHub para ver tus repositorios.
+          Connect your GitHub account to see your repositories.
         </p>
       )}
       {!loading && hasGithub && repos.length > 0 && filteredRepos.length === 0 && (

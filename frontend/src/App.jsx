@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import ScanRepository from './pages/ScanRepository'
 import UploadCode from './pages/UploadCode'
 import Reports from './pages/Reports'
+import ScanDetails from './pages/ScanDetails'
 import Chat from './pages/Chat'
 import Settings from './pages/Settings'
 
@@ -23,12 +24,13 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<AppShell />}>
-          <Route path="/"         element={<Dashboard />} />
-          <Route path="/scan"     element={<ScanRepository />} />
-          <Route path="/upload"   element={<UploadCode />} />
-          <Route path="/reports"  element={<Reports />} />
-          <Route path="/chat"     element={<Chat />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/"                         element={<Dashboard />} />
+          <Route path="/scan"                      element={<ScanRepository />} />
+          <Route path="/scan/:scanId/results"      element={<ScanDetails />} />
+          <Route path="/upload"                    element={<UploadCode />} />
+          <Route path="/reports"                   element={<Reports />} />
+          <Route path="/chat"                      element={<Chat />} />
+          <Route path="/settings"                  element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>

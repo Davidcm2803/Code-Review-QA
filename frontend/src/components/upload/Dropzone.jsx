@@ -84,11 +84,11 @@ export default function Dropzone({ onFilesAdded, onError }) {
       for (const file of files) {
         const ext = getExtension(file.name);
         if (!SUPPORTED_EXTENSIONS.includes(ext)) {
-          errors.push(`${file.name}: extensión no soportada`);
+          errors.push(`${file.name}: unsupported extension`);
           continue;
         }
         if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-          errors.push(`${file.name}: supera ${MAX_FILE_SIZE_MB}MB`);
+          errors.push(`${file.name}: exceeds ${MAX_FILE_SIZE_MB}MB`);
           continue;
         }
         valid.push(file);
@@ -113,7 +113,7 @@ export default function Dropzone({ onFilesAdded, onError }) {
           if (files.length) validateAndEmit(files);
           else
             onError?.([
-              "No se encontraron archivos válidos en lo que soltaste",
+              "No valid files were found in what you dropped",
             ]);
         })
         .finally(() => setScanning(false));
@@ -177,10 +177,10 @@ export default function Dropzone({ onFilesAdded, onError }) {
         <p
           style={{ fontSize: 14, fontWeight: 600, color: "#c8d8cc", margin: 0 }}
         >
-          {scanning ? "Leyendo carpeta..." : "Suelta archivos aquí"}
+          {scanning ? "Reading folder..." : "Drop files here"}
         </p>
         <p style={{ fontSize: 13, color: "#8fa894", margin: "4px 0 0" }}>
-          o haz click para buscar
+          or click to browse
         </p>
       </div>
       <p
@@ -191,7 +191,7 @@ export default function Dropzone({ onFilesAdded, onError }) {
           margin: 0,
         }}
       >
-        {SUPPORTED_EXTENSIONS.join(", ")} · máx {MAX_FILE_SIZE_MB}MB c/u
+        {SUPPORTED_EXTENSIONS.join(", ")} · max {MAX_FILE_SIZE_MB}MB each
       </p>
     </div>
   );

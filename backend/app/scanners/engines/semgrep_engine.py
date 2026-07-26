@@ -3,7 +3,7 @@ import json
 import shutil
 from app.core.logger import logger
 
-# Configs publicos de Semgrep por lenguaje
+# Configs  de Semgrep por lenguaje
 LANGUAGE_CONFIGS = {
     "javascript": ["p/javascript", "p/react"],
     "typescript": ["p/typescript", "p/react"],
@@ -24,7 +24,7 @@ def build_configs(languages: list[str]) -> list[str]:
 
 
 def run_semgrep(repo_path: str, configs: list[str]) -> dict:
-    # Ejecuta Semgrep sobre el repo con los configs dados y retorna el JSON de resultados
+    # Ejecuta Semgrep sobre el repo con los configs y retorna el JSON de resultados
     if not configs:
         logger.info("Semgrep: sin configs aplicables, se salta la ejecucion")
         return {"results": [], "errors": []}

@@ -3,12 +3,16 @@ from bson import ObjectId
 from app.ai.rag.embeddings import embed_text
 
 
-async def retrieve_context(db, repository_id: ObjectId, query: str, top_k: int = 10) -> list[dict]:
-    chunks = await db.code_embeddings.find({"repository_id": repository_id}).to_list(length=None)
+async def retrieve_context(
+    db, repository_id: ObjectId, scan_id: str, query: str, top_k: int = 10
+) -> list[dict]:
+    chunks = await db.code_embeddings.find(
+        {"repository_id": repository_id, "scan_id": scan_id}
+    ).to_list(length=None)
     if not chunks:
         return []
 
-    query_vec = np.array(embed_text(query))
+    query_vec = np.array(await embed_text(query))
     matrix = np.array([c["embedding"] for c in chunks])
     scores = matrix @ query_vec
 

@@ -18,7 +18,7 @@ def run_osv_scanner(repo_path: str) -> dict:
             text=True,
             timeout=180,
         )
-        # osv-scanner devuelve exit code 1 cuando SI encuentra vulns, no es un error
+        # osv-scanner devuelve exit code 1 cuando encuentra vulns
         if not result.stdout.strip():
             logger.warning(f"osv-scanner no produjo output. stderr: {result.stderr.strip()}")
             return {"results": [], "errors": []}

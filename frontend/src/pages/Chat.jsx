@@ -205,10 +205,10 @@ export default function Chat() {
             }}
           >
             <MessageSquareText size={20} style={{ color: 'var(--primary)' }} />
-            Chat de seguridad
+            QA CHAT
           </h1>
           <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
-            Preguntá sobre el código escaneado usando contexto real (RAG) en vez de adivinar.
+            Ask about the vulnerabilities in your code 
           </p>
         </div>
 
@@ -222,7 +222,7 @@ export default function Chat() {
             padding: '5px 10px',
           }}
         >
-          {messagesLeft}/{DAILY_LIMIT} mensajes hoy
+          {messagesLeft}/{DAILY_LIMIT} Limit rage question
         </span>
       </div>
 
@@ -267,7 +267,7 @@ export default function Chat() {
               }}
             >
               <span>{selectedScan.repo_name ?? selectedScan.name}</span>
-              {!backendReady && <span style={{ color: 'var(--high)' }}>backend no disponible</span>}
+              {!backendReady && <span style={{ color: 'var(--high)' }}>backend not available</span>}
             </div>
           )}
 
@@ -298,10 +298,10 @@ export default function Chat() {
               disabled={!selectedScanId || sending || limitReached}
               placeholder={
                 limitReached
-                  ? 'Alcanzaste el límite diario de mensajes'
+                  ? 'You have reached your daily message limit'
                   : !selectedScanId
-                  ? 'Elegí un scan primero...'
-                  : 'Preguntá sobre este repositorio...'
+                  ? 'Chose a repositorie to scan first...'
+                  : 'Ask about this repository...'
               }
             />
           </div>

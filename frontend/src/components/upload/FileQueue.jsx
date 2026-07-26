@@ -21,7 +21,7 @@ export default function FileQueue({ files, onRemove }) {
         background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8,
         boxSizing: 'border-box',
       }}>
-        <p style={{ fontSize: 13, color: '#4a5c50', margin: 0 }}>No hay archivos seleccionados</p>
+        <p style={{ fontSize: 13, color: '#4a5c50', margin: 0 }}>No files selected</p>
       </div>
     )
   }
@@ -36,9 +36,9 @@ export default function FileQueue({ files, onRemove }) {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         padding: '10px 14px', borderBottom: '1px solid var(--border)',
       }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: '#c8d8cc' }}>Archivos a escanear</span>
+        <span style={{ fontSize: 13, fontWeight: 500, color: '#c8d8cc' }}>Files to scan</span>
         <span style={{ fontSize: 12, color: '#4a5c50', fontFamily: 'monospace' }}>
-          {files.length} {files.length === 1 ? 'archivo' : 'archivos'}
+          {files.length} {files.length === 1 ? 'file' : 'files'}
         </span>
       </div>
 

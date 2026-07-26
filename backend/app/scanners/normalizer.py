@@ -103,10 +103,9 @@ def normalize_semgrep(raw: dict, repository_id: str, scan_id: str, repo_path: st
     return normalized
 
 
-# osv-scanner (dependencias)
-
+# osv-scanner
 def _resolve_osv_severity(severity_list: list) -> str:
-    # esta funcion busca el score CVSS y lo convierte a nuestra escala de severidad
+    # Busca el score CVSS y lo convierte a al report de severidad 
     for s in severity_list:
         if s.get("type") in ("CVSS_V3", "CVSS_V4"):
             score_str = s.get("score", "")
@@ -126,7 +125,6 @@ def _resolve_osv_severity(severity_list: list) -> str:
 
 
 def _extract_fixed_versions(vuln: dict) -> list:
-    # esta funcion junta todas las versiones donde ya se arreglo la vulnerabilidad
     fixed = []
     for affected in vuln.get("affected", []):
         for r in affected.get("ranges", []):
@@ -137,7 +135,6 @@ def _extract_fixed_versions(vuln: dict) -> list:
 
 
 def normalize_osv(raw: dict, repository_id: str, scan_id: str) -> List[Dict[str, Any]]:
-    # esta funcion convierte el resultado de osv-scanner al schema de MongoDB
     normalized = []
 
     for result in raw.get("results", []):
@@ -183,10 +180,8 @@ def normalize_osv(raw: dict, repository_id: str, scan_id: str) -> List[Dict[str,
     return normalized
 
 
-# gitleaks (secretos)
-
+# gitleaks
 def _redact_secret(match: str, secret: str) -> str:
-    # esta funcion enmascara el secreto real para no guardarlo en texto plano en Mongo
     if not secret:
         return match[:80]
     if len(secret) <= 8:
@@ -197,7 +192,6 @@ def _redact_secret(match: str, secret: str) -> str:
 
 
 def normalize_gitleaks(raw: list, repository_id: str, scan_id: str, repo_path: str) -> List[Dict[str, Any]]:
-    # esta funcion convierte el resultado de gitleaks al schema de MongoDB
     normalized = []
 
     for item in raw:
@@ -238,7 +232,7 @@ def normalize_gitleaks(raw: list, repository_id: str, scan_id: str, repo_path: s
 # checkov (IaC)
 
 def _resolve_checkov_severity(check_id: str, guideline: str) -> str:
-    # esta funcion asigna severidad porque checkov no siempre trae un campo severity usable
+    # Asigna severidad porque checkov no trae un campo severity usable
     high_risk_prefixes = ("CKV_DOCKER", "CKV_K8S", "CKV_AWS")
     if check_id.startswith(high_risk_prefixes):
         return "high"
@@ -246,7 +240,6 @@ def _resolve_checkov_severity(check_id: str, guideline: str) -> str:
 
 
 def normalize_checkov(raw: dict, repository_id: str, scan_id: str, repo_path: str) -> List[Dict[str, Any]]:
-    # esta funcion convierte el resultado de checkov al schema de MongoDB
     failed_checks = raw.get("results", {}).get("failed_checks", [])
     normalized = []
 
@@ -281,7 +274,7 @@ def normalize_checkov(raw: dict, repository_id: str, scan_id: str, repo_path: st
     return normalized
 
 
-# --- helpers compartidos entre detectores ---
+# helpers
 
 def _extract_snippet(file_path: str, start_line: int, end_line: int) -> str:
     # Semgrep  requiere login
@@ -298,7 +291,7 @@ def _extract_snippet(file_path: str, start_line: int, end_line: int) -> str:
 
 
 def _strip_repo_path(path: str, repo_path: str) -> str:
-    # Convierte el path absoluto que devuelve semgrep en un path relativo al repo
+    # Convierte el path que devuelve semgrep en un path temp para el repo
     normalized_path = path.replace("\\", "/")
     normalized_repo = repo_path.replace("\\", "/").rstrip("/")
     if normalized_path.startswith(normalized_repo):

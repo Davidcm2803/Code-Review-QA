@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     # Groq / RAG
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
-    RAG_DAILY_LIMIT: int = 5
+    RAG_DAILY_LIMIT: int = 10
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
 
     class Config:

@@ -3,7 +3,7 @@ import httpx
 
 router = APIRouter(prefix="/api/github", tags=["github"])
 
-
+# Recibe el token de acceso de Git
 @router.get("/repos")
 async def get_repos(x_github_token: str = Header(...)):
     async with httpx.AsyncClient() as client:
@@ -33,7 +33,7 @@ async def get_repos(x_github_token: str = Header(...)):
         for r in repos
     ]
 
-
+# Comunicacion con la API de Git
 @router.get("/repos/{owner}/{repo}/branches")
 async def get_branches(owner: str, repo: str, x_github_token: str = Header(...)):
     async with httpx.AsyncClient() as client:

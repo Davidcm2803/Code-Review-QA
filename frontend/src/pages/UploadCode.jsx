@@ -8,12 +8,12 @@ import CodePasteInput from '../components/upload/CodePasteInput'
 import { scanService } from '../config/Api'
 import { MAX_FILES, MAX_PASTE_LINES } from '../lib/scan'
 
-let nextId = 1 // id local para el queue, no viaja al backend
+let nextId = 1
 
 export default function UploadCode() {
   const navigate = useNavigate()
 
-  const [mode, setMode] = useState('upload') // 'upload' | 'paste'
+  const [mode, setMode] = useState('upload')
   const [queue, setQueue] = useState([])
   const [pasteCode, setPasteCode] = useState('')
   const [pasteFilename, setPasteFilename] = useState('pasted_code.py')
@@ -21,7 +21,6 @@ export default function UploadCode() {
   const [scanning, setScanning] = useState(false)
   const [progressMessage, setProgressMessage] = useState('')
 
-  // Agrega archivos validados al queue, respetando MAX_FILES
   const handleFilesAdded = (files) => {
     setError(null)
     setQueue((prev) => {
@@ -42,12 +41,11 @@ export default function UploadCode() {
     })
   }
 
-  // Dropzone manda un array de mensajes (extensión/tamaño inválidos)
+  // Dropzone manda un array de mensajes
   const handleFilesError = (errors) => setError(errors.join(' · '))
 
   const handleRemove = (id) => setQueue((prev) => prev.filter((f) => f.id !== id))
 
-  // Mismo patrón que ScanRepository.jsx: navega a "/" con results en state
   const runPolling = async (scanId) => {
     const results = await scanService.pollUntilDone(scanId, {
       onProgress: (status) => setProgressMessage(status.message),

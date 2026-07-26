@@ -14,7 +14,7 @@ from app.scanners.scan_orchestrator import run_scan
 from app.scanners.normalizer import compute_metrics, compute_security_score
 from app.core.logger import logger
 
-# extensiones permitidas
+
 ALLOWED_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".cs"}
 MAX_FILE_SIZE = 1 * 1024 * 1024   # 1mb por archivo
 MAX_FILES = 50                    # max archivos por scan
@@ -36,8 +36,9 @@ async def _emit_event(db, scan_id: str, event_type: str, message: str):
         "created_at": datetime.now(timezone.utc),
     })
 
-
+# crea el documento de repositorio temporal
 async def _create_repo_and_scan(db, user_id: str, repo_name: str, source_type: str, extra_repo_fields: dict = None):
+    
     now = datetime.now(timezone.utc)
     repo_doc = {
         "_id":         ObjectId(),
@@ -69,9 +70,9 @@ async def _create_repo_and_scan(db, user_id: str, repo_name: str, source_type: s
     await db["repositories"].update_one({"_id": repo_doc["_id"]}, {"$set": {"last_scan_id": scan_id_obj}})
     return repository_id, scan_id
 
-
+# inicia un scan clonando en un repo de git
 async def start_scan(clone_url: str, branch: str, repo_name: str, user_id: str, github_token: str | None = None) -> str:
-    # scan de repo github
+    
     db = get_db()
     now = datetime.now(timezone.utc)
 
@@ -112,8 +113,9 @@ async def start_scan(clone_url: str, branch: str, repo_name: str, user_id: str, 
     asyncio.create_task(_run_scan_task(db, scan_id, repository_id, clone_url, branch, repo_name, github_token))
     return scan_id
 
-
+# valida archivos subidos y lanza un scan 
 async def start_scan_from_upload(files: list[UploadFile], user_id: str) -> str:
+    
     if not files:
         raise ValueError("No se recibieron archivos")
     if len(files) > MAX_FILES:
@@ -138,8 +140,9 @@ async def start_scan_from_upload(files: list[UploadFile], user_id: str) -> str:
     asyncio.create_task(_run_scan_task_from_files(db, scan_id, repository_id, contents))
     return scan_id
 
-
+# valida codigo pegado y lanza un scan sobre ese archivo
 async def start_scan_from_paste(code: str, filename: str, user_id: str) -> str:
+    
     lines = code.splitlines()
     if not lines:
         raise ValueError("El codigo esta vacio")
@@ -158,8 +161,9 @@ async def start_scan_from_paste(code: str, filename: str, user_id: str) -> str:
     )
     return scan_id
 
-
+# guarda las vulnerabilidades encontradas y marca el scan como completado
 async def _finalize_scan(db, scan_id: str, vulns: list[dict]):
+    
     if vulns:
         now = datetime.now(timezone.utc)
         for v in vulns:
@@ -170,10 +174,10 @@ async def _finalize_scan(db, scan_id: str, vulns: list[dict]):
     score = compute_security_score(metrics)
     total = sum(metrics.values())
     summary = (
-        f"Se detectaron {total} vulnerabilidades: "
-        f"{metrics['critical']} criticas, {metrics['high']} altas, "
-        f"{metrics['medium']} medias, {metrics['low']} bajas. "
-        f"Score de seguridad: {score}/100."
+        f"Detected {total} vulnerabilities: "
+        f"{metrics['critical']} critical, {metrics['high']} high, "
+        f"{metrics['medium']} medium, {metrics['low']} low. "
+        f"Security score: {score}/100."
     )
 
     completed_at = datetime.now(timezone.utc)
@@ -201,7 +205,9 @@ async def _mark_scan_failed(db, scan_id: str, error: Exception):
     await _emit_event(db, scan_id, "failed", f"Error durante el scan: {str(error)}")
 
 
+# clona el repo y ejecuta los scanners
 async def _run_scan_task(db, scan_id: str, repository_id: str, clone_url: str, branch: str, repo_name: str, github_token: str | None = None):
+    
     repo_path = None
     try:
         await _emit_event(db, scan_id, "progress", f"Clonando {repo_name} rama {branch}...")
@@ -221,8 +227,9 @@ async def _run_scan_task(db, scan_id: str, repository_id: str, clone_url: str, b
         if repo_path:
             cleanup_repo(repo_path)
 
-
+# prepara el workspace temp con los archivos ejecuta los scanners
 async def _run_scan_task_from_files(db, scan_id: str, repository_id: str, files: list[tuple[str, bytes]]):
+    
     repo_path = None
     try:
         await _emit_event(db, scan_id, "progress", f"Preparando {len(files)} archivo(s)...")
@@ -242,8 +249,9 @@ async def _run_scan_task_from_files(db, scan_id: str, repository_id: str, files:
         if repo_path:
             cleanup_repo(repo_path)
 
-
+# devuelve el estado actual del scan y su ultimo evento de progreso
 async def get_scan_status(scan_id: str, user_id: str) -> dict | None:
+    
     db = get_db()
     try:
         oid = _to_object_id(scan_id)
@@ -268,9 +276,10 @@ async def get_scan_status(scan_id: str, user_id: str) -> dict | None:
         "summary":        scan.get("executive_summary"),
         "repository_id":  str(scan.get("repository_id", "")),
     }
-
-
+    
+# devuelve el scan completo con sus vulnerabilidades 
 async def get_scan_results(scan_id: str, user_id: str) -> dict | None:
+
     db = get_db()
     try:
         oid = _to_object_id(scan_id)
@@ -300,8 +309,9 @@ async def get_scan_results(scan_id: str, user_id: str) -> dict | None:
         "completed_at":    scan.get("completed_at").strftime("%Y-%m-%dT%H:%M:%SZ") if scan.get("completed_at") else None,
     }
 
-
+# devuelve el resultado del ultimo scan para dashboard
 async def get_latest_scan(user_id: str) -> dict | None:
+
     db = get_db()
     scan = await db["scans"].find_one(
         {"user_id": user_id, "status": "completed"},
@@ -311,7 +321,7 @@ async def get_latest_scan(user_id: str) -> dict | None:
         return None
     return await get_scan_results(str(scan["_id"]), user_id)
 
-
+# devuelve una vulnerabilidad dentro de un scan 
 async def get_vulnerability(scan_id: str, vuln_id: str, user_id: str) -> dict | None:
     db = get_db()
     try:

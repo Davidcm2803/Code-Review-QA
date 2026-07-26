@@ -124,11 +124,11 @@ export default function ActivityList({ scanData }) {
           >
             {showAll ? (
               <>
-                <ChevronUp size={12} /> Ver menos
+                <ChevronUp size={12} /> View less
               </>
             ) : (
               <>
-                <ChevronDown size={12} /> Ver todas (+{hiddenCount} más)
+                <ChevronDown size={12} /> View All (+{hiddenCount} más)
               </>
             )}
           </button>

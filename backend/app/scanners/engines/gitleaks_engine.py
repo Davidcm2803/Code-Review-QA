@@ -7,7 +7,7 @@ from app.core.logger import logger
 
 
 def run_gitleaks(repo_path: str) -> list:
-    # esta funcion corre gitleaks sobre el repo y devuelve la lista de secretos encontrados
+    # Corre gitleaks sobre el repo y devuelve la lista de secretos encontrados
     if shutil.which("gitleaks") is None:
         logger.error("gitleaks no esta instalado")
         return []
@@ -32,7 +32,7 @@ def run_gitleaks(repo_path: str) -> list:
             timeout=180,
         )
 
-        # gitleaks puede devolver stderr con warnings aunque el exit code sea 0, no es un error fatal
+        # gitleaks puede devolver stderr con warnings aunque el exit code sea 0
         if result.returncode != 0:
             logger.warning(f"gitleaks devolvio codigo {result.returncode}. stderr: {result.stderr.strip()}")
 
@@ -43,7 +43,7 @@ def run_gitleaks(repo_path: str) -> list:
         with open(report_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        # el reporte de gitleaks es directamente una lista de findings
+        # el reporte de gitleaks es una lista de findings
         if not isinstance(data, list):
             logger.warning("gitleaks devolvio un formato inesperado, se esperaba una lista")
             return []

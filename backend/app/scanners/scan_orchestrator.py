@@ -1,4 +1,5 @@
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from app.core.logger import logger
 from app.scanners.engines.bandit_engine import run_bandit
 from app.scanners.engines.semgrep_engine import run_semgrep, build_configs
@@ -46,73 +47,90 @@ def detect_languages(repo_path: str) -> list[str]:
     return langs
 
 
-def run_scan(repo_path: str, repository_id: str, scan_id: str) -> list[dict]:
-    # corre todos los engines disponibles segun lo que detecte en el repo
-    languages = detect_languages(repo_path)
-    all_vulns = []
+def _run_bandit_job(repo_path, repository_id, scan_id):
+    logger.info("Ejecutando Bandit (Python)")
+    raw = run_bandit(repo_path)
+    vulns = normalize_bandit(raw, repository_id, scan_id)
+    logger.info(f"Bandit: {len(vulns)} vulnerabilidades encontradas")
+    return vulns
 
-    # Bandit
+
+def _run_semgrep_job(repo_path, repository_id, scan_id, semgrep_langs):
+    logger.info(f"Ejecutando Semgrep ({', '.join(semgrep_langs)})")
+    configs = build_configs(semgrep_langs)
+    raw = run_semgrep(repo_path, configs)
+    vulns = normalize_semgrep(raw, repository_id, scan_id, repo_path)
+    logger.info(f"Semgrep: {len(vulns)} vulnerabilidades encontradas")
+    return vulns
+
+
+def _run_osv_job(repo_path, repository_id, scan_id):
+    logger.info("Ejecutando osv-scanner (dependencias)")
+    raw = run_osv_scanner(repo_path)
+    vulns = normalize_osv(raw, repository_id, scan_id)
+    logger.info(f"osv-scanner: {len(vulns)} vulnerabilidades encontradas")
+    return vulns
+
+
+def _run_gitleaks_job(repo_path, repository_id, scan_id):
+    logger.info("Ejecutando gitleaks (secretos)")
+    raw = run_gitleaks(repo_path)
+    vulns = normalize_gitleaks(raw, repository_id, scan_id, repo_path)
+    logger.info(f"gitleaks: {len(vulns)} secretos encontrados")
+    return vulns
+
+
+def _run_checkov_job(repo_path, repository_id, scan_id):
+    logger.info("Ejecutando checkov (IaC)")
+    raw = run_checkov(repo_path)
+    vulns = normalize_checkov(raw, repository_id, scan_id, repo_path)
+    logger.info(f"checkov: {len(vulns)} configuraciones inseguras encontradas")
+    return vulns
+
+
+def run_scan(repo_path: str, repository_id: str, scan_id: str) -> list[dict]:
+    # corre todos los engines usando thread pool
+
+    languages = detect_languages(repo_path)
+    semgrep_langs = [lang for lang in languages if lang in SEMGREP_LANGUAGES]
+
+    jobs = {}
+
     if "python" in languages:
-        try:
-            logger.info("Ejecutando Bandit (Python)")
-            raw = run_bandit(repo_path)
-            vulns = normalize_bandit(raw, repository_id, scan_id)
-            all_vulns.extend(vulns)
-            logger.info(f"Bandit: {len(vulns)} vulnerabilidades encontradas")
-        except Exception as e:
-            logger.error(f"Bandit fallo durante el scan: {e}", exc_info=True)
+        jobs["bandit"] = (_run_bandit_job, (repo_path, repository_id, scan_id))
     else:
         logger.info("No se detecto Python en el repo, saltando Bandit")
 
-    # Semgrep
-    semgrep_langs = [lang for lang in languages if lang in SEMGREP_LANGUAGES]
     if semgrep_langs:
-        try:
-            logger.info(f"Ejecutando Semgrep ({', '.join(semgrep_langs)})")
-            configs = build_configs(semgrep_langs)
-            raw = run_semgrep(repo_path, configs)
-            vulns = normalize_semgrep(raw, repository_id, scan_id, repo_path)
-            all_vulns.extend(vulns)
-            logger.info(f"Semgrep: {len(vulns)} vulnerabilidades encontradas")
-        except Exception as e:
-            logger.error(f"Semgrep fallo durante el scan: {e}", exc_info=True)
+        jobs["semgrep"] = (_run_semgrep_job, (repo_path, repository_id, scan_id, semgrep_langs))
     else:
         logger.info("No se detecto JS/TS/JSX/TSX/C# en el repo, saltando Semgrep")
 
-    # osv-scanner
     if has_dependency_manifests(repo_path):
-        try:
-            logger.info("Ejecutando osv-scanner (dependencias)")
-            raw = run_osv_scanner(repo_path)
-            vulns = normalize_osv(raw, repository_id, scan_id)
-            all_vulns.extend(vulns)
-            logger.info(f"osv-scanner: {len(vulns)} vulnerabilidades encontradas")
-        except Exception as e:
-            logger.error(f"osv-scanner fallo durante el scan: {e}", exc_info=True)
+        jobs["osv-scanner"] = (_run_osv_job, (repo_path, repository_id, scan_id))
     else:
         logger.info("No se detectaron manifests de dependencias, saltando osv-scanner")
 
-    # gitleaks
-    try:
-        logger.info("Ejecutando gitleaks (secretos)")
-        raw = run_gitleaks(repo_path)
-        vulns = normalize_gitleaks(raw, repository_id, scan_id, repo_path)
-        all_vulns.extend(vulns)
-        logger.info(f"gitleaks: {len(vulns)} secretos encontrados")
-    except Exception as e:
-        logger.error(f"gitleaks fallo durante el scan: {e}", exc_info=True)
+    jobs["gitleaks"] = (_run_gitleaks_job, (repo_path, repository_id, scan_id))
 
-    # checkov
     if has_iac_files(repo_path):
-        try:
-            logger.info("Ejecutando checkov (IaC)")
-            raw = run_checkov(repo_path)
-            vulns = normalize_checkov(raw, repository_id, scan_id, repo_path)
-            all_vulns.extend(vulns)
-            logger.info(f"checkov: {len(vulns)} configuraciones inseguras encontradas")
-        except Exception as e:
-            logger.error(f"checkov fallo durante el scan: {e}", exc_info=True)
+        jobs["checkov"] = (_run_checkov_job, (repo_path, repository_id, scan_id))
     else:
         logger.info("No se detectaron archivos IaC, saltando checkov")
+
+    all_vulns = []
+
+    with ThreadPoolExecutor(max_workers=len(jobs) or 1) as executor:
+        future_to_name = {
+            executor.submit(fn, *args): name
+            for name, (fn, args) in jobs.items()
+        }
+        for future in as_completed(future_to_name):
+            name = future_to_name[future]
+            try:
+                vulns = future.result()
+                all_vulns.extend(vulns)
+            except Exception as e:
+                logger.error(f"{name} fallo durante el scan: {e}", exc_info=True)
 
     return all_vulns

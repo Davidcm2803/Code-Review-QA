@@ -57,13 +57,13 @@ def create_temp_workspace_from_files(files: list[tuple[str, bytes]]) -> str:
         rel_path = _safe_relative_path(filename)
         dest = os.path.join(tmp_dir, rel_path)
         if not os.path.abspath(dest).startswith(os.path.abspath(tmp_dir) + os.sep):
-            logger.warning(f"Nombre de archivo sospechoso ignorado: {filename}")
+            logger.warning(f"Archivo sospechoso ignorado: {filename}")
             continue
 
         os.makedirs(os.path.dirname(dest), exist_ok=True)
 
         if os.path.exists(dest):
-            logger.warning(f"Archivo duplicado detectado, se sobreescribe: {rel_path}")
+            logger.warning(f"Archivo duplicado detectado: {rel_path}")
 
         with open(dest, "wb") as f:
             f.write(content)

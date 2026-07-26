@@ -14,22 +14,37 @@ def get_groq_client() -> Groq:
     return _client
 
 
-def ask_llm(system_prompt: str, question: str) -> tuple[str, int]:
+def ask_llm(system_prompt: str, question: str, history: list[dict] | None = None) -> tuple[str, int]:
     client = get_groq_client()
+    messages = [{"role": "system", "content": system_prompt}]
+    if history:
+        messages.extend(history)
+    messages.append({"role": "user", "content": question})
+
     try:
         completion = client.chat.completions.create(
             model=settings.GROQ_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": question},
-            ],
-            temperature=0.2,
-            max_tokens=800,
+            messages=messages,
+            temperature=1.05, # que tan robot suena la ia o no
+            max_tokens=1500,
         )
     except Exception as e:
         logger.error(f"Error llamando a Groq: {e}")
         raise
 
-    answer = completion.choices[0].message.content
+    choice = completion.choices[0]
+    answer = choice.message.content
     tokens_used = completion.usage.total_tokens if completion.usage else 0
+
+    if choice.finish_reason == "length":
+        logger.warning(
+            f"Groq's response cut off due to max_tokens (session context: "
+            f"question={question[:80]!r}, tokens_used={tokens_used})"
+        )
+        answer = (
+            answer
+            + "\n\n_(The response was cut off due to the token limit — "
+            "ask me to continue or ask a more specific question.)_"
+        )
+
     return answer, tokens_used

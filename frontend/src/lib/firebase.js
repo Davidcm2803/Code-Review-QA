@@ -104,7 +104,7 @@ export async function connectGitHub() {
     return githubToken
   } catch (error) {
     if (error.code === 'auth/account-exists-with-different-credential') {
-      throw new Error('Esa cuenta de GitHub ya está asociada a otro método de acceso.')
+      throw new Error('Esa cuenta de GitHub ya está asociada.')
     }
     throw error
   }
