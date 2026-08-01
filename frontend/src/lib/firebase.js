@@ -40,6 +40,7 @@ function buildUserPayload(user, provider, githubToken = null) {
   }
 }
 
+
 export async function loginWithGitHub() {
   try {
     const result = await signInWithPopup(auth, githubProvider)
