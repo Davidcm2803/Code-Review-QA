@@ -1,105 +1,104 @@
-import { useState } from 'react'
-import { GitBranch, KeyRound, Bell, ShieldCheck, RefreshCw, Mail, AlertTriangle, FileText, GitPullRequest, Search, Save } from 'lucide-react'
-import PageHeader from '../components/layout/PageHeader'
-import Button from '../components/ui/Button'
-import SettingsSection from '../components/settings/SettingsSection'
-import SettingRow from '../components/settings/SettingRow'
+import { useState } from 'react';
+import {
+  Mail,
+  AlertTriangle,
+  FileText,
+  GitPullRequest,
+  Search,
+  KeyRound,
+} from 'lucide-react';
+
+import PageHeader from '../components/layout/PageHeader';
+import ProfileSection from '../components/settings/ProfileSection';
+import SecuritySection from '../components/settings/SecuritySection';
+import PreferencesSection from '../components/settings/PreferencesSection';
+import DangerZone from '../components/settings/DangerZone';
+import SettingsSection from '../components/settings/SettingsSection';
+import SettingRow from '../components/settings/SettingRow';
+import { DEFAULT_PROFILE } from '../data/profile';
 
 const INITIAL_NOTIFICATIONS = [
   { id: 'email', icon: Mail, label: 'Email notifications', description: 'Receive alerts via email', checked: true },
   { id: 'critical', icon: AlertTriangle, label: 'Critical vulnerability alerts', description: 'Immediate alerts for critical issues', checked: true },
   { id: 'digest', icon: FileText, label: 'Weekly security digest', description: 'Summary of all scans and findings', checked: false },
-]
+];
 
 const INITIAL_SCAN_SETTINGS = [
   { id: 'autoScan', icon: GitPullRequest, label: 'Auto-scan on push', description: 'Automatically scan when code is pushed', checked: true },
   { id: 'deepScan', icon: Search, label: 'Deep dependency scan', description: 'Scan transitive dependencies (slower)', checked: false },
   { id: 'secrets', icon: KeyRound, label: 'Secrets detection', description: 'Scan for exposed API keys and credentials', checked: true },
-]
+];
 
 export default function Settings() {
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS)
-  const [scanSettings, setScanSettings] = useState(INITIAL_SCAN_SETTINGS)
+  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [scanSettings, setScanSettings] = useState(INITIAL_SCAN_SETTINGS);
+  const [profile, setProfile] = useState(DEFAULT_PROFILE);
+  const [preferences, setPreferences] = useState({ theme: 'dark', language: 'en' });
 
-  const toggleItem = (setter) => (id, value) =>
-    setter((items) => items.map((item) => (item.id === id ? { ...item, checked: value } : item)))
+  const toggleItem = (setter) => (id, value) => {
+    setter((items) => items.map((item) => (item.id === id ? { ...item, checked: value } : item)));
+  };
+
+  const handleSaveProfile = (updatedProfile) => {
+    setProfile(updatedProfile);
+    console.log('Profile updated:', updatedProfile);
+  };
+
+  const handleUpdatePassword = (passwords) => {
+    console.log('Password update request:', passwords);
+  };
+
+  const handleSavePreferences = (newPrefs) => {
+    setPreferences(newPrefs);
+    console.log('Preferences updated:', newPrefs);
+  };
+
+  const handleDeleteAccount = () => {
+    console.log('Account deletion confirmed');
+  };
 
   return (
-    <div className="min-w-0 @container space-y-6 p-8">
-      <PageHeader
-        title="Settings"
-        subtitle="Configure your security scanning preferences"
-      />
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '1.5rem' }}>
+      <PageHeader title="Settings" description="Manage your account settings and preferences" />
 
-      <div className="grid grid-cols-1 gap-5 @lg:grid-cols-2">
-        <SettingsSection icon={GitBranch} title="GitHub Integration" subtitle="Connect your GitHub account to scan repositories">
-          <div className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3" style={{ borderColor: 'var(--border)' }}>
-            <span className="flex min-w-0 items-center gap-2 truncate text-[13px]">
-              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: 'var(--primary)' }} />
-              Connected as <span className="font-mono" style={{ color: 'var(--muted)' }}>@developer</span>
-            </span>
-            <Button variant="ghost" size="sm" className="shrink-0">Disconnect</Button>
-          </div>
+      {/* Contenedor principal con flex layout y gap para garantizar la separación vertical */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1.5rem' }}>
+        
+        {/* FASE 1: Profile */}
+        <ProfileSection profile={profile} onSave={handleSaveProfile} />
+
+        {/* FASE 2: Security */}
+        <SecuritySection onUpdatePassword={handleUpdatePassword} />
+
+        {/* FASE 3: Preferences */}
+        <PreferencesSection preferences={preferences} onSavePreferences={handleSavePreferences} />
+
+        {/* Notifications */}
+        <SettingsSection title="Notifications" description="Configure how you receive alerts">
+          {notifications.map((item) => (
+            <SettingRow
+              key={item.id}
+              {...item}
+              onChange={(checked) => toggleItem(setNotifications)(item.id, checked)}
+            />
+          ))}
         </SettingsSection>
 
-        <SettingsSection icon={KeyRound} title="API Keys" subtitle="Manage your API access tokens">
-          <div>
-            <label className="mb-1.5 block text-xs" style={{ color: 'var(--muted)' }}>API Key</label>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                readOnly
-                value="sk_live_a1b2c3d4e5f6g7h8"
-                className="h-9 min-w-0 flex-1 rounded-md border bg-transparent px-3 font-mono text-[13px]"
-                style={{ borderColor: 'var(--border)' }}
-              />
-              <Button variant="ghost" size="md" className="shrink-0">
-                <RefreshCw size={13} />
-                Regenerate
-              </Button>
-            </div>
-          </div>
+        {/* Scan Settings */}
+        <SettingsSection title="Scan Settings" description="Configure automated scanning behaviors">
+          {scanSettings.map((item) => (
+            <SettingRow
+              key={item.id}
+              {...item}
+              onChange={(checked) => toggleItem(setScanSettings)(item.id, checked)}
+            />
+          ))}
         </SettingsSection>
 
+        {/* FASE 4: Danger Zone */}
+        <DangerZone onDeleteAccount={handleDeleteAccount} />
 
-        <SettingsSection icon={Bell} title="Notifications" subtitle="Configure how you receive security alerts">
-          <div>
-            {notifications.map((item, i) => (
-              <SettingRow
-                key={item.id}
-                icon={item.icon}
-                label={item.label}
-                description={item.description}
-                checked={item.checked}
-                onChange={(val) => toggleItem(setNotifications)(item.id, val)}
-                last={i === notifications.length - 1}
-              />
-            ))}
-          </div>
-        </SettingsSection>
-
-
-        <SettingsSection icon={ShieldCheck} title="Scan Settings" subtitle="Configure security scanning behavior">
-          <div>
-            {scanSettings.map((item, i) => (
-              <SettingRow
-                key={item.id}
-                icon={item.icon}
-                label={item.label}
-                description={item.description}
-                checked={item.checked}
-                onChange={(val) => toggleItem(setScanSettings)(item.id, val)}
-                last={i === scanSettings.length - 1}
-              />
-            ))}
-          </div>
-        </SettingsSection>
       </div>
-
-      <Button variant="primary" size="md">
-        <Save size={14} />
-        Save Changes
-      </Button>
     </div>
-  )
+  );
 }
