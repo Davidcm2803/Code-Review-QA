@@ -1,0 +1,44 @@
+name: aisecureqa
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongo-aisecure
+    restart: unless-stopped
+    ports:
+      - "27019:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin1234
+      MONGO_INITDB_DATABASE: ai_secure_qa
+    volumes:
+      - mongo_aisecure_data:/data/db
+      - ./backend/DB/mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - aisecure-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend-aisecure
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - HF_HUB_OFFLINE=1
+    depends_on:
+      - mongodb
+    volumes:
+      - ./backend/app:/app/app
+    networks:
+      - aisecure-net
+
+volumes:
+  mongo_aisecure_data:
+
+networks:
+  aisecure-net:
+    driver: bridge
