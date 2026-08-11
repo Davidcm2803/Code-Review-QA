@@ -274,6 +274,60 @@ def normalize_checkov(raw: dict, repository_id: str, scan_id: str, repo_path: st
     return normalized
 
 
+# DAST  ataque con runner
+
+NUCLEI_SEVERITY_MAP = {
+    "critical": "critical",
+    "high":     "high",
+    "medium":   "medium",
+    "low":      "low",
+    "info":     "low",
+}
+
+
+def normalize_nuclei(raw: list, repository_id: str, scan_id: str) -> List[Dict[str, Any]]:
+    normalized = []
+
+    for item in raw:
+        info = item.get("info", {})
+        severity = NUCLEI_SEVERITY_MAP.get(info.get("severity", "info"), "low")
+        template_id = item.get("template-id") or item.get("template_id", "unknown-template")
+        classification = info.get("classification") or {}
+        cve_id = classification.get("cve-id")
+
+        remediation = info.get("remediation") or (
+            "Revisar el hallazgo confirmado por explotación real (no es un falso positivo estático) "
+            "y aplicar el fix correspondiente a la vulnerabilidad detectada."
+        )
+        references = info.get("reference") or []
+        if references:
+            ref = references[0] if isinstance(references, list) else references
+            remediation += f" Más info: {ref}"
+
+        vuln = {
+            "scan_id":                    scan_id,
+            "repository_id":              repository_id,
+            "title":                      info.get("name", template_id)[:200],
+            "description":                (
+                f"{info.get('description', 'Vulnerabilidad confirmada mediante ataque activo (DAST).')} "
+                f"Template: {template_id}."
+                + (f" CVE: {cve_id}." if cve_id else "")
+            ),
+            "severity":                   severity,
+            "detector_source":            "nuclei",
+            "file_path":                  item.get("matched-at", item.get("host", "")),
+            "line_start":                 0,
+            "line_end":                   0,
+            "vulnerable_code":            item.get("curl-command", "")[:500],
+            "remediation_recommendation": remediation,
+            "status":                     "open",
+            "confirmed_by_exploit":       True,
+        }
+        normalized.append(vuln)
+
+    return normalized
+
+
 # helpers
 
 def _extract_snippet(file_path: str, start_line: int, end_line: int) -> str:
