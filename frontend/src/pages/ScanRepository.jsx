@@ -15,6 +15,7 @@ export default function ScanRepository() {
   const [url, setUrl] = useState("");
   const [branch, setBranch] = useState("main");
   const [branches, setBranches] = useState(["main"]);
+  const [liveAttack, setLiveAttack] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [repos, setRepos] = useState([]);
@@ -67,10 +68,13 @@ export default function ScanRepository() {
 
   const startPolling = (scanId) => {
     let fakeProgress = 5;
+    const step = liveAttack ? 2 : 8;
+    const cap = liveAttack ? 92 : 85;
+
     pollRef.current = setInterval(async () => {
       try {
         const status = await api.get(`/api/scan/${scanId}/status`);
-        fakeProgress = Math.min(fakeProgress + Math.random() * 8, 85);
+        fakeProgress = Math.min(fakeProgress + Math.random() * step, cap);
         setProgress(fakeProgress);
 
         if (status.status === "completed") {
@@ -107,6 +111,7 @@ export default function ScanRepository() {
       const { scan_id } = await scanService.startFromGithub({
         clone_url: url,
         branch,
+        live_attack: liveAttack,
       });
       scanRef.current = scan_id;
       startPolling(scan_id);
@@ -155,6 +160,8 @@ export default function ScanRepository() {
         scanning={scanning}
         progress={progress}
         onScan={handleScan}
+        liveAttack={liveAttack}
+        onLiveAttackChange={setLiveAttack}
       />
 
       {error && (

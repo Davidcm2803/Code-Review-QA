@@ -17,6 +17,18 @@ services:
     networks:
       - aisecure-net
 
+  runner:
+    build:
+      context: ./runner
+      dockerfile: Dockerfile
+    container_name: runner-aisecure
+    restart: unless-stopped
+    volumes:
+      # acceso a Docker SOLO desde este servicio aislado
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - aisecure-net
+
   backend:
     build:
       context: ./backend
@@ -31,6 +43,7 @@ services:
       - HF_HUB_OFFLINE=1
     depends_on:
       - mongodb
+      - runner
     volumes:
       - ./backend/app:/app/app
     networks:

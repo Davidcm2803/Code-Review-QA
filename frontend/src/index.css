@@ -38,6 +38,25 @@
   --font-mono:   'JetBrains Mono', monospace;
 }
 
+/* Tema Dark (por defecto) */
+:root {
+  --bg-primary: #09090b;
+  --bg-secondary: #18181b;
+  --border: #27272a;
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+}
+
+/* Tema Light */
+:root[data-theme='light'],
+.light {
+  --bg-primary: #f4f4f5;
+  --bg-secondary: #ffffff;
+  --border: #e4e4e7;
+  --text-primary: #09090b;
+  --text-secondary: #71717a;
+}
+
 @layer base {
   *, *::before, *::after {
     box-sizing: border-box;

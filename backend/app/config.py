@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     RAG_DAILY_LIMIT: int = 10
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
 
+    # Runner sandbox DAST ataque con Nuclei
+    RUNNER_URL: str = "http://runner:9000"
+    RUNNER_TIMEOUT: int = 280
+
     class Config:
         env_file = ".env"
 

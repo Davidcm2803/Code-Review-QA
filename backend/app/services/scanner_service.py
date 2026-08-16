@@ -10,8 +10,9 @@ from app.services.repo_fetcher_service import (
     cleanup_repo,
     create_temp_workspace_from_files,
 )
+from app.services.runner_client import run_dast
 from app.scanners.scan_orchestrator import run_scan
-from app.scanners.normalizer import compute_metrics, compute_security_score
+from app.scanners.normalizer import compute_metrics, compute_security_score, normalize_nuclei
 from app.core.logger import logger
 
 
@@ -71,8 +72,15 @@ async def _create_repo_and_scan(db, user_id: str, repo_name: str, source_type: s
     return repository_id, scan_id
 
 # inicia un scan clonando en un repo de git
-async def start_scan(clone_url: str, branch: str, repo_name: str, user_id: str, github_token: str | None = None) -> str:
-    
+async def start_scan(
+    clone_url: str,
+    branch: str,
+    repo_name: str,
+    user_id: str,
+    github_token: str | None = None,
+    live_attack: bool = False,
+) -> str:
+
     db = get_db()
     now = datetime.now(timezone.utc)
 
@@ -107,10 +115,13 @@ async def start_scan(clone_url: str, branch: str, repo_name: str, user_id: str, 
         "executive_summary":   None,
         "report_generated_at": None,
         "completed_at":        None,
+        "live_attack":         live_attack,
     })
     await db["repositories"].update_one({"_id": repo_doc["_id"]}, {"$set": {"last_scan_id": scan_id_obj}})
 
-    asyncio.create_task(_run_scan_task(db, scan_id, repository_id, clone_url, branch, repo_name, github_token))
+    asyncio.create_task(
+        _run_scan_task(db, scan_id, repository_id, clone_url, branch, repo_name, github_token, live_attack)
+    )
     return scan_id
 
 # valida archivos subidos y lanza un scan 
@@ -205,9 +216,11 @@ async def _mark_scan_failed(db, scan_id: str, error: Exception):
     await _emit_event(db, scan_id, "failed", f"Error durante el scan: {str(error)}")
 
 
-# clona el repo y ejecuta los scanners
-async def _run_scan_task(db, scan_id: str, repository_id: str, clone_url: str, branch: str, repo_name: str, github_token: str | None = None):
-    
+# clona el repo y ejecuta los scanners (estático + opcionalmente ataque en vivo)
+async def _run_scan_task(
+    db, scan_id: str, repository_id: str, clone_url: str, branch: str, repo_name: str,
+    github_token: str | None = None, live_attack: bool = False,
+):
     repo_path = None
     try:
         await _emit_event(db, scan_id, "progress", f"Clonando {repo_name} rama {branch}...")
@@ -215,8 +228,35 @@ async def _run_scan_task(db, scan_id: str, repository_id: str, clone_url: str, b
         loop = asyncio.get_event_loop()
         repo_path = await loop.run_in_executor(None, fetch_repo, clone_url, branch, github_token)
 
-        await _emit_event(db, scan_id, "progress", "Detectando lenguajes y ejecutando scanners...")
-        vulns = await loop.run_in_executor(None, run_scan, repo_path, repository_id, scan_id)
+        if live_attack:
+            await _emit_event(db, scan_id, "progress",
+                               "Ejecutando análisis estático y ataque en vivo (esto puede tardar hasta 5 min)...")
+        else:
+            await _emit_event(db, scan_id, "progress", "Ejecutando análisis estático...")
+
+        static_task = loop.run_in_executor(None, run_scan, repo_path, repository_id, scan_id)
+
+        if live_attack:
+            dast_task = run_dast(clone_url, branch, scan_id, github_token)
+            static_vulns, dast_result = await asyncio.gather(static_task, dast_task)
+        else:
+            static_vulns = await static_task
+            dast_result = None
+
+        vulns = static_vulns
+
+        if dast_result is not None:
+            if dast_result["status"] == "completed":
+                dast_vulns = normalize_nuclei(dast_result["findings"], repository_id, scan_id)
+                vulns = vulns + dast_vulns
+                await _emit_event(db, scan_id, "progress",
+                                   f"Ataque en vivo completado: {len(dast_vulns)} vulnerabilidades confirmadas")
+            elif dast_result["status"] == "skipped":
+                await _emit_event(db, scan_id, "progress", f"Ataque en vivo omitido: {dast_result['reason']}")
+            else:
+                await _emit_event(db, scan_id, "progress",
+                                   f"Ataque en vivo no se pudo completar: {dast_result['reason']}")
+                # el estático sigue valiendo, no se marca el scan como failed por esto
 
         await _emit_event(db, scan_id, "progress", "Calculando metricas y generando reporte...")
         await _finalize_scan(db, scan_id, vulns)

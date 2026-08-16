@@ -18,9 +18,10 @@ ALLOWED_GIT_HOSTS = {"github.com", "gitlab.com"}
 
 
 class ScanRequest(BaseModel):
-    clone_url: str
-    branch:    str = "main"
-    repo_name: str = ""
+    clone_url:   str
+    branch:      str = "main"
+    repo_name:   str = ""
+    live_attack: bool = False  # ataque en vivo con DAST
 
     @field_validator("clone_url")
     @classmethod
@@ -54,6 +55,7 @@ async def start_scan_endpoint(
         repo_name=repo_name,
         user_id=str(current_user["_id"]),
         github_token=x_github_token,
+        live_attack=body.live_attack,
     )
     return {"scan_id": scan_id, "status": "running"}
 

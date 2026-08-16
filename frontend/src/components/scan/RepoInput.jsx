@@ -1,13 +1,19 @@
-import { Search, GitBranch, Loader2, Zap } from 'lucide-react'
+import { Search, GitBranch, Loader2, Zap, Skull } from 'lucide-react'
 
-function getScanStatus(p) {
+function getScanStatus(p, liveAttack) {
   if (p < 30) return 'Cloning repository...'
   if (p < 60) return 'Analyzing dependencies...'
-  if (p < 90) return 'Scanning for vulnerabilities...'
+  if (p < 85) return liveAttack ? 'Scanning for vulnerabilities...' : 'Scanning for vulnerabilities...'
+  if (p < 100 && liveAttack) return 'Running live attack (this can take up to 5 min)...'
   return 'Generating report...'
 }
 
-export default function RepoInput({ url, onUrlChange, branch, onBranchChange, branches = ['main'], scanning, progress, onScan }) {
+export default function RepoInput({
+  url, onUrlChange,
+  branch, onBranchChange, branches = ['main'],
+  scanning, progress, onScan,
+  liveAttack, onLiveAttackChange,
+}) {
   return (
     <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
 
@@ -37,10 +43,41 @@ export default function RepoInput({ url, onUrlChange, branch, onBranchChange, br
         </div>
       </div>
 
+      <label
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '10px 12px',
+          borderRadius: 8,
+          border: `1px solid ${liveAttack ? 'var(--primary)' : 'var(--border)'}`,
+          background: liveAttack ? 'rgba(0,255,136,0.06)' : 'var(--input)',
+          cursor: scanning ? 'not-allowed' : 'pointer',
+          transition: 'background 0.15s, border-color 0.15s',
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={liveAttack}
+          disabled={scanning}
+          onChange={(e) => onLiveAttackChange(e.target.checked)}
+          style={{ width: 15, height: 15, accentColor: 'var(--primary)', cursor: scanning ? 'not-allowed' : 'pointer' }}
+        />
+        <Skull size={14} style={{ color: liveAttack ? 'var(--primary)' : 'var(--muted)', flexShrink: 0 }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)' }}>
+            Live attack (DAST)
+          </span>
+          <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+            Sandbox aislado para ataques seguros. Requiere Dockerfile en el repo
+          </span>
+        </div>
+      </label>
+
       {scanning && (
         <div style={{ background: 'var(--input)', border: '1px solid var(--border)', borderRadius: 8, padding: '14px 16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-            <span style={{ fontSize: 13, color: 'var(--fg)' }}>{getScanStatus(progress)}</span>
+            <span style={{ fontSize: 13, color: 'var(--fg)' }}>{getScanStatus(progress, liveAttack)}</span>
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--primary)' }}>{Math.round(progress)}%</span>
           </div>
           <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>

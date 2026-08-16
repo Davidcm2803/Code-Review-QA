@@ -19,6 +19,26 @@ const SEVERITY_FILTER_COLORS = {
   low: 'var(--low)',
 }
 
+function ExploitedBadge() {
+  return (
+    <span
+      style={{
+        borderRadius: 4,
+        padding: '2px 6px',
+        fontFamily: 'monospace',
+        fontSize: 10,
+        fontWeight: 600,
+        textTransform: 'uppercase',
+        background: 'rgba(139,92,246,0.12)',
+        color: '#a78bfa',
+      }}
+      title="Confirmado mediante ataque en vivo (DAST), no solo análisis estático"
+    >
+      Exploited
+    </span>
+  )
+}
+
 export default function ScanDetails() {
   const { scanId } = useParams()
   const navigate = useNavigate()
@@ -293,6 +313,7 @@ export default function ScanDetails() {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <SeverityBadge level={v.severity} />
+                {v.confirmed_by_exploit && <ExploitedBadge />}
                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)' }}>{v.title}</span>
               </div>
 
