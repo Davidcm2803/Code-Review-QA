@@ -1,0 +1,106 @@
+// AI SECURE QA — MVP Schema 
+// Optimizado para: 3 usuarios, GitHub + Upload, RAG
+
+// Usuarios de la plataforma
+Table users {
+  _id           ObjectId  [pk]
+  email         String    [not null, unique]
+  password_hash String    [note: 'null si entró por GitHub OAuth']
+  github_id     String    [unique, note: 'null si no usó OAuth']
+  name          String
+  role          String    [note: 'user | admin']
+  created_at    Date
+  updated_at    Date
+}
+
+// Repositorios registrados (GitHub o upload local)
+Table repositories {
+  _id             ObjectId  [pk]
+  user_id         ObjectId  [not null, ref: > users._id]
+  name            String    [not null]
+  source_type     String    [note: 'github | local_upload']
+  github_url      String    [note: 'null si es local_upload']
+  github_metadata JSON      [note: 'owner, branch, clone_url — solo si source_type=github']
+  last_scan_id    ObjectId  [ref: > scans._id, note: 'Referencia rápida al escaneo más reciente']
+  created_at      Date
+  updated_at      Date
+}
+
+// Escaneos de seguridad con report
+Table scans {
+  _id                  ObjectId  [pk]
+  repository_id        ObjectId  [not null, ref: > repositories._id]
+  user_id              ObjectId  [not null, ref: > users._id]
+  status               String    [note: 'pending | running | completed | failed']
+  security_score       Int       [note: '0-100, calculado por backend según severidad']
+  metrics              JSON      [note: '{ critical, high, medium, low } — conteo por severidad']
+  ai_analysis          String    [note: 'Texto generado por LLM resumiendo el escaneo completo']
+  executive_summary    String    [note: 'Resumen no técnico para stakeholders']
+  report_generated_at  Date      [note: 'null hasta que el reporte esté listo']
+  started_at           Date
+  completed_at         Date
+  created_at           Date
+}
+
+// Progreso por scan
+Table scan_events {
+  _id        ObjectId  [pk]
+  scan_id    ObjectId  [not null, ref: > scans._id]
+  type       String    [note: 'started | progress | completed | failed']
+  message    String    [note: 'Ej: Analizando auth.py... | Scan completado con 3 vulnerabilidades']
+  created_at Date
+}
+
+// Vulnerabilidades encontradas en cada escaneo
+Table vulnerabilities {
+  _id                        ObjectId  [pk]
+  scan_id                    ObjectId  [not null, ref: > scans._id]
+  repository_id              ObjectId  [not null, ref: > repositories._id]
+  title                      String    [not null]
+  description                String
+  severity                   String    [note: 'critical | high | medium | low']
+  detector_source            String    [note: 'sql_detector | xss_detector | semgrep | trivy | etc']
+  file_path                  String    [note: 'Ruta relativa del archivo afectado']
+  line_start                 Int       [note: 'Línea donde empieza el problema']
+  line_end                   Int       [note: 'Línea donde termina el problema']
+  vulnerable_code            String    [note: 'Fragmento de código afectado']
+  remediation_recommendation String    [note: 'Sugerencia concreta de cómo arreglarlo']
+  status                     String    [note: 'open | acknowledged | resolved']
+  created_at                 Date
+}
+
+// Sesiones del chatbot (repo, scan o general)
+Table chat_sessions {
+  _id           ObjectId  [pk]
+  user_id       ObjectId  [not null, ref: > users._id]
+  repository_id ObjectId  [ref: > repositories._id, note: 'null si context_mode=general']
+  scan_id       ObjectId  [ref: > scans._id, note: 'null si no se vincula a un scan específico']
+  title         String
+  status        String    [note: 'active | archived']
+  context_mode  String    [note: 'repo | scan | general — define qué contexto carga el LLM']
+  created_at    Date
+  updated_at    Date
+}
+
+// Mensajes del chat
+Table chat_messages {
+  _id             ObjectId  [pk]
+  session_id      ObjectId  [not null, ref: > chat_sessions._id]
+  role            String    [note: 'user | assistant | system']
+  content         String    [not null]
+  tokens_used     Int       [note: 'null si role=user']
+  rag_chunks_used JSON      [note: 'Array de chunk _ids usados — trazabilidad básica del RAG']
+  created_at      Date
+}
+
+// Embeddings (RAG)
+Table code_embeddings {
+  _id           ObjectId  [pk]
+  repository_id ObjectId  [not null, ref: > repositories._id]
+  file_path     String    [not null, note: 'Ruta relativa del archivo vectorizado']
+  chunk_index   Int       [not null, note: 'Posición del fragmento dentro del archivo (0-based)']
+  chunk_text    String    [not null, note: 'Texto original del fragmento de código']
+  embedding     Array     [not null, note: 'Vector numérico generado por el modelo de embeddings']
+  model_used    String    [note: 'Modelo que generó el embedding, ej: text-embedding-3-small']
+  created_at    Date
+}
