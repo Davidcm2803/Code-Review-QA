@@ -44,6 +44,34 @@ export const authService = {
   login: (payload) => api.post("/api/auth/login", payload),
   oauth: (firebaseUser) => api.post("/api/auth/oauth", firebaseUser),
   me: () => api.get("/api/auth/me"),
+
+  updateProfile: (payload) => api.patch("/api/auth/me", payload),
+
+  changePassword: ({ currentPassword, newPassword }) =>
+    api.post("/api/auth/change-password", {
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+
+  deleteAccount: () => api.delete("/api/auth/me"),
+
+  uploadAvatar: async (file) => {
+    const token = localStorage.getItem("token");
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${API_BASE_URL}/api/auth/me/avatar`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: res.statusText }));
+      const err = new Error(error.detail ?? `Error ${res.status}`);
+      err.status = res.status;
+      throw err;
+    }
+    return res.json();
+  },
 };
 
 export const scanService = {

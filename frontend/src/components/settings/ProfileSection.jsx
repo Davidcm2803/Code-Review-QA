@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import AvatarUploader from './AvatarUploader';
 
-export const ProfileSection = ({ profile, onSave }) => {
+export const ProfileSection = ({ profile, onSave, loading = false, error = '' }) => {
+  const isOAuth = profile?.provider && profile.provider !== 'local';
   const [formData, setFormData] = useState({
     username: profile?.username || '',
     email: profile?.email || '',
@@ -11,7 +12,6 @@ export const ProfileSection = ({ profile, onSave }) => {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(profile?.avatar || null);
 
-  // Limpieza de memoria para URLs creadas temporalmente
   useEffect(() => {
     return () => {
       if (avatarPreview && avatarPreview.startsWith('blob:')) {
@@ -84,6 +84,21 @@ export const ProfileSection = ({ profile, onSave }) => {
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        {error && (
+          <div
+            style={{
+              padding: '0.75rem',
+              borderRadius: '0.375rem',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid var(--danger, #ef4444)',
+              color: 'var(--danger, #ef4444)',
+              fontSize: '0.875rem',
+            }}
+          >
+            {error}
+          </div>
+        )}
+
         <div>
           <label
             style={{
@@ -156,6 +171,7 @@ export const ProfileSection = ({ profile, onSave }) => {
             name="email"
             value={formData.email}
             onChange={handleChange}
+            disabled={isOAuth}
             placeholder="developer@example.com"
             style={{
               width: '100%',
@@ -163,12 +179,18 @@ export const ProfileSection = ({ profile, onSave }) => {
               fontSize: '0.875rem',
               borderRadius: '0.375rem',
               border: '1px solid var(--border, #3f3f46)',
-              backgroundColor: 'var(--bg-primary, #09090b)',
-              color: 'var(--text-primary, #ffffff)',
+              backgroundColor: isOAuth ? 'var(--bg-secondary, #18181b)' : 'var(--bg-primary, #09090b)',
+              color: isOAuth ? 'var(--text-secondary, #a1a1aa)' : 'var(--text-primary, #ffffff)',
               outline: 'none',
               boxSizing: 'border-box',
+              cursor: isOAuth ? 'not-allowed' : 'text',
             }}
           />
+          {isOAuth && (
+            <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary, #a1a1aa)', marginTop: '0.375rem' }}>
+              Tu email lo administra {formData.provider}. Cambialo desde tu cuenta de {formData.provider}.
+            </span>
+          )}
         </div>
 
         <div>
@@ -203,6 +225,7 @@ export const ProfileSection = ({ profile, onSave }) => {
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
           <button
             type="submit"
+            disabled={loading}
             style={{
               padding: '0.5rem 1rem',
               fontSize: '0.875rem',
@@ -211,11 +234,12 @@ export const ProfileSection = ({ profile, onSave }) => {
               border: 'none',
               backgroundColor: 'var(--primary, #2563eb)',
               color: '#ffffff',
-              cursor: 'pointer',
+              cursor: loading ? 'wait' : 'pointer',
+              opacity: loading ? 0.7 : 1,
               transition: 'opacity 0.2s',
             }}
           >
-            Save Profile
+            {loading ? 'Saving...' : 'Save Profile'}
           </button>
         </div>
       </form>

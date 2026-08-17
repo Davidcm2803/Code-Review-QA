@@ -30,3 +30,10 @@ checkov
 groq
 sentence-transformers
 numpy
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov
+pytest-mock
+mongomock-motor

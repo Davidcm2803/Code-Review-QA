@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight, LogIn, LogOut, User } from 'lucide-react'
 import { SidebarNavLinks } from './SidebarNav'
+import { AuthRow } from './AuthRow'
 import { S } from './sidebar.styles'
 
 export function SidebarDesktop({ user, logout, onOpenModal }) {
