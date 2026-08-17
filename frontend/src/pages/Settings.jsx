@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Mail,
   AlertTriangle,
@@ -15,7 +16,9 @@ import PreferencesSection from '../components/settings/PreferencesSection';
 import DangerZone from '../components/settings/DangerZone';
 import SettingsSection from '../components/settings/SettingsSection';
 import SettingRow from '../components/settings/SettingRow';
-import { DEFAULT_PROFILE } from '../data/profile';
+import { useAuth } from '../context/AuthContext';
+import { authService } from '../config/Api';
+import { resolveAvatarUrl } from '../lib/avatar';
 
 const INITIAL_NOTIFICATIONS = [
   { id: 'email', icon: Mail, label: 'Email notifications', description: 'Receive alerts via email', checked: true },
@@ -30,45 +33,98 @@ const INITIAL_SCAN_SETTINGS = [
 ];
 
 export default function Settings() {
+  const { user, updateUser, logout } = useAuth();
+  const navigate = useNavigate();
+
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [scanSettings, setScanSettings] = useState(INITIAL_SCAN_SETTINGS);
-  const [profile, setProfile] = useState(DEFAULT_PROFILE);
+
+  const [profile, setProfile] = useState({
+    username: user?.name || '',
+    email: user?.email || '',
+    avatar: resolveAvatarUrl(user?.photo) || null,
+    provider: user?.provider || 'local',
+    hasPassword: user?.has_password ?? (user?.provider === 'local' || !user?.provider),
+  });
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState('');
+
   const [preferences, setPreferences] = useState({ theme: 'dark', language: 'en' });
 
   const toggleItem = (setter) => (id, value) => {
     setter((items) => items.map((item) => (item.id === id ? { ...item, checked: value } : item)));
   };
 
-  const handleSaveProfile = (updatedProfile) => {
-    setProfile(updatedProfile);
-    console.log('Profile updated:', updatedProfile);
+  const handleSaveProfile = async (updatedProfile) => {
+    setProfileError('');
+    setProfileLoading(true);
+    try {
+      let photo = profile.avatar;
+
+      // 1. Si hay un archivo nuevo, sube el avatar primero
+      if (updatedProfile.avatarFile) {
+        const avatarResult = await authService.uploadAvatar(updatedProfile.avatarFile);
+        photo = resolveAvatarUrl(avatarResult.photo); 
+      }
+
+      // 2. Actualiza name / email
+      const result = await authService.updateProfile({
+        name: updatedProfile.username,
+        email: updatedProfile.email,
+      });
+
+      setProfile({ ...profile, username: result.name, email: result.email, avatar: photo });
+      // 3. Refleja el cambio en el resto de la app (sidebar, avatar) sin recargar
+      updateUser({ name: result.name, email: result.email, photo });
+    } catch (err) {
+      setProfileError(err.message || 'No se pudo actualizar el perfil.');
+    } finally {
+      setProfileLoading(false);
+    }
   };
 
-  const handleUpdatePassword = (passwords) => {
-    console.log('Password update request:', passwords);
+  const handleUpdatePassword = async (passwords) => {
+    await authService.changePassword(passwords);
+    // A partir de ahora sí tiene password (importa si era una cuenta OAuth
+    // que recién se puso su primera contraseña): la próxima vez que la
+    // cambie, el form le va a pedir la actual.
+    setProfile((prev) => ({ ...prev, hasPassword: true }));
   };
 
   const handleSavePreferences = (newPrefs) => {
     setPreferences(newPrefs);
-    console.log('Preferences updated:', newPrefs);
+    // Persistencia en backend: pendiente/opcional (ver notas del resumen de auth)
   };
 
-  const handleDeleteAccount = () => {
-    console.log('Account deletion confirmed');
+  const handleDeleteAccount = async () => {
+    try {
+      await authService.deleteAccount();
+      await logout();
+      navigate('/login');
+    } catch (err) {
+      alert(err.message || 'No se pudo eliminar la cuenta.');
+    }
   };
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '1.5rem' }}>
       <PageHeader title="Settings" description="Manage your account settings and preferences" />
 
-      {/* Contenedor principal con flex layout y gap para garantizar la separación vertical */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1.5rem' }}>
-        
+
         {/* FASE 1: Profile */}
-        <ProfileSection profile={profile} onSave={handleSaveProfile} />
+        <ProfileSection
+          profile={profile}
+          onSave={handleSaveProfile}
+          loading={profileLoading}
+          error={profileError}
+        />
 
         {/* FASE 2: Security */}
-        <SecuritySection onUpdatePassword={handleUpdatePassword} />
+        <SecuritySection
+          onUpdatePassword={handleUpdatePassword}
+          requireCurrentPassword={profile.hasPassword}
+        />
 
         {/* FASE 3: Preferences */}
         <PreferencesSection preferences={preferences} onSavePreferences={handleSavePreferences} />

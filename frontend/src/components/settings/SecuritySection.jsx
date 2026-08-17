@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 
 /**
- * SecuritySection - Sección para actualizar la contraseña del usuario.
- * 
- * @param {function} onUpdatePassword - Callback para enviar la nueva contraseña al backend/padre.
+ *
+ * @param {function} onUpdatePassword 
+ * @param {boolean} requireCurrentPassword 
+ *   oculta el campo "Current Password" y no lo exige
  */
-export const SecuritySection = ({ onUpdatePassword }) => {
+export const SecuritySection = ({ onUpdatePassword, requireCurrentPassword = true }) => {
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -21,6 +22,7 @@ export const SecuritySection = ({ onUpdatePassword }) => {
   // Mensajes de feedback
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,7 +31,7 @@ export const SecuritySection = ({ onUpdatePassword }) => {
     setSuccess('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -37,28 +39,33 @@ export const SecuritySection = ({ onUpdatePassword }) => {
     const { currentPassword, newPassword, confirmPassword } = formData;
 
     // Validaciones
-    if (!currentPassword || !newPassword || !confirmPassword) {
+    if (requireCurrentPassword && !currentPassword) {
+      setError('Please enter your current password.');
+      return;
+    }
+    if (!newPassword || !confirmPassword) {
       setError('Please fill in all password fields.');
       return;
     }
-
     if (newPassword.length < 8) {
       setError('New password must be at least 8 characters long.');
       return;
     }
-
     if (newPassword !== confirmPassword) {
       setError('New passwords do not match.');
       return;
     }
 
-    // Ejecutar callback
-    if (onUpdatePassword) {
-      onUpdatePassword({ currentPassword, newPassword });
+    try {
+      setSubmitting(true);
+      await onUpdatePassword({ currentPassword, newPassword });
+      setSuccess('Password updated successfully!');
+      setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      setError(err.message || 'No se pudo actualizar la contraseña.');
+    } finally {
+      setSubmitting(false);
     }
-
-    setSuccess('Password updated successfully!');
-    setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
   };
 
   return (
@@ -130,60 +137,62 @@ export const SecuritySection = ({ onUpdatePassword }) => {
           </div>
         )}
 
-        {/* Current Password */}
-        <div>
-          <label
-            htmlFor="currentPassword"
-            style={{
-              display: 'block',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              color: 'var(--text-primary, #ffffff)',
-              marginBottom: '0.375rem',
-            }}
-          >
-            Current Password
-          </label>
-          <div style={{ position: 'relative' }}>
-            <input
-              type={showCurrent ? 'text' : 'password'}
-              id="currentPassword"
-              name="currentPassword"
-              value={formData.currentPassword}
-              onChange={handleChange}
-              placeholder="••••••••"
+        {/* Current Password (oculto para usuarios OAuth puros) */}
+        {requireCurrentPassword && (
+          <div>
+            <label
+              htmlFor="currentPassword"
               style={{
-                width: '100%',
-                padding: '0.5rem 2.5rem 0.5rem 0.75rem',
+                display: 'block',
                 fontSize: '0.875rem',
-                borderRadius: '0.375rem',
-                border: '1px solid var(--border, #3f3f46)',
-                backgroundColor: 'var(--bg-primary, #09090b)',
+                fontWeight: 500,
                 color: 'var(--text-primary, #ffffff)',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowCurrent(!showCurrent)}
-              style={{
-                position: 'absolute',
-                right: '0.75rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-secondary, #a1a1aa)',
-                cursor: 'pointer',
-                padding: 0,
-                display: 'flex',
+                marginBottom: '0.375rem',
               }}
             >
-              {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+              Current Password
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showCurrent ? 'text' : 'password'}
+                id="currentPassword"
+                name="currentPassword"
+                value={formData.currentPassword}
+                onChange={handleChange}
+                placeholder="••••••••"
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 2.5rem 0.5rem 0.75rem',
+                  fontSize: '0.875rem',
+                  borderRadius: '0.375rem',
+                  border: '1px solid var(--border, #3f3f46)',
+                  backgroundColor: 'var(--bg-primary, #09090b)',
+                  color: 'var(--text-primary, #ffffff)',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrent(!showCurrent)}
+                style={{
+                  position: 'absolute',
+                  right: '0.75rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary, #a1a1aa)',
+                  cursor: 'pointer',
+                  padding: 0,
+                  display: 'flex',
+                }}
+              >
+                {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* New Password */}
         <div>
@@ -299,6 +308,7 @@ export const SecuritySection = ({ onUpdatePassword }) => {
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
           <button
             type="submit"
+            disabled={submitting}
             style={{
               padding: '0.5rem 1rem',
               fontSize: '0.875rem',
@@ -307,11 +317,12 @@ export const SecuritySection = ({ onUpdatePassword }) => {
               border: 'none',
               backgroundColor: 'var(--primary, #2563eb)',
               color: '#ffffff',
-              cursor: 'pointer',
+              cursor: submitting ? 'wait' : 'pointer',
+              opacity: submitting ? 0.7 : 1,
               transition: 'opacity 0.2s',
             }}
           >
-            Update Password
+            {submitting ? 'Updating...' : 'Update Password'}
           </button>
         </div>
       </form>

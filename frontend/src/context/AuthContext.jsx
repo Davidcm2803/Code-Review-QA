@@ -16,6 +16,14 @@ export function AuthProvider({ children }) {
     setUser(userData)
   }
 
+  const updateUser = (partial) => {
+    setUser((prev) => {
+      const next = { ...prev, ...partial }
+      localStorage.setItem('user', JSON.stringify(next))
+      return next
+    })
+  }
+
   const logout = async () => {
     if (user?.provider === 'google' || user?.provider === 'github') {
       const { logout: firebaseLogout } = await import('../lib/firebase')
@@ -28,7 +36,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   )

@@ -35,6 +35,8 @@ class UserOut(BaseModel):
     name: str
     role: str
     photo: Optional[str] = None
+    provider: str = "local"
+    has_password: bool = False  #dice al frontend si el usuario puede cambiar contraseña con "current password" NO CAMBIAR
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -43,3 +45,20 @@ class UserOut(BaseModel):
 class AuthResponse(BaseModel):
     token: str
     user: UserOut
+
+
+class UpdateProfileRequest(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: Optional[str] = None
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_min_length(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("La contraseña debe tener al menos 8 caracteres")
+        return v
