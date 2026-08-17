@@ -1,12 +1,11 @@
 import { useRef } from 'react';
 import { Camera, Trash2, User } from 'lucide-react';
+import { resolveAvatarUrl } from '../../lib/avatar';
 
 /**
- * AvatarUploader - Componente independiente para cargar y previsualizar la foto de perfil.
- * 
- * @param {string|null} avatar - URL o preview Base64/ObjectUrl de la imagen actual.
- * @param {string} username - Nombre de usuario para calcular las iniciales de fallback.
- * @param {function} onChange - Callback que se ejecuta al seleccionar una nueva imagen o eliminar la actual. Devuelve (File | null).
+ * @param {string|null} avatar 
+ * @param {string} username 
+ * @param {function} onChange 
  */
 export const AvatarUploader = ({ avatar, username = '', onChange }) => {
   const fileInputRef = useRef(null);
@@ -21,6 +20,7 @@ export const AvatarUploader = ({ avatar, username = '', onChange }) => {
   };
 
   const initials = getInitials(username);
+  const resolvedAvatar = resolveAvatarUrl(avatar);
 
   // Manejar la selección de archivo desde el input
   const handleFileChange = (e) => {
@@ -78,9 +78,9 @@ export const AvatarUploader = ({ avatar, username = '', onChange }) => {
           flexShrink: 0,
         }}
       >
-        {avatar ? (
+        {resolvedAvatar ? (
           <img
-            src={avatar}
+            src={resolvedAvatar}
             alt={username || 'User Avatar'}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />

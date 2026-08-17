@@ -1,3 +1,4 @@
+// App.jsx
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom'
 import Sidebar from './components/sidebar/Sidebar'
 import Dashboard from './pages/Dashboard'
@@ -12,8 +13,16 @@ function AppShell() {
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <Sidebar />
-      <main style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
-        <Outlet />
+      <main style={{
+        flex: 1,
+        minWidth: 0,
+        overflowY: 'auto',
+        display: 'flex',
+        justifyContent: 'center',
+      }}>
+        <div style={{ width: '100%', maxWidth: 1400, padding: '0 1.5rem' }}>
+          <Outlet />
+        </div>
       </main>
     </div>
   )

@@ -46,6 +46,8 @@ services:
       - runner
     volumes:
       - ./backend/app:/app/app
+      - ./backend/tests:/app/tests
+      - ./backend/static:/app/static
     networks:
       - aisecure-net
 

@@ -1,8 +1,8 @@
-// layout/SidebarMobile.jsx
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { MoreHorizontal } from 'lucide-react'
 import { NAV, SidebarNavLinks } from './SidebarNav'
+import { AuthRow } from './AuthRow'
 import { S } from './sidebar.styles'
 
 const VISIBLE = 4
