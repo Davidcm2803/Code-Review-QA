@@ -1,5 +1,5 @@
-// App.jsx
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
 import Sidebar from './components/sidebar/Sidebar'
 import Dashboard from './pages/Dashboard'
 import ScanRepository from './pages/ScanRepository'
@@ -10,6 +10,18 @@ import Chat from './pages/Chat'
 import Settings from './pages/Settings'
 
 function AppShell() {
+  useEffect(() => {
+    const yaVisto = localStorage.getItem('demo_notice_shown')
+    if (!yaVisto) {
+      alert(
+        'Este es un demo hecho por David Castillo.\n\n' +
+        'El backend se activa manualmente para evitar accesos no deseados. ' +
+        'Si ves errores de conexión, es normal — contáctame para activarlo.'
+      )
+      localStorage.setItem('demo_notice_shown', 'true')
+    }
+  }, [])
+
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <Sidebar />

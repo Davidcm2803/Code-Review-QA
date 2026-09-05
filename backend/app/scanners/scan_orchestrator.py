@@ -88,8 +88,11 @@ def _run_checkov_job(repo_path, repository_id, scan_id):
     return vulns
 
 
+MAX_PARALLEL_SCANNERS = 2  # limite de scanners simultaneos para no joder al hp render con la RAM
+
+
 def run_scan(repo_path: str, repository_id: str, scan_id: str) -> list[dict]:
-    # corre todos los engines usando thread pool
+    # corre los engines en paralelo de 2 a 2
 
     languages = detect_languages(repo_path)
     semgrep_langs = [lang for lang in languages if lang in SEMGREP_LANGUAGES]
@@ -120,7 +123,9 @@ def run_scan(repo_path: str, repository_id: str, scan_id: str) -> list[dict]:
 
     all_vulns = []
 
-    with ThreadPoolExecutor(max_workers=len(jobs) or 1) as executor:
+    max_workers = min(MAX_PARALLEL_SCANNERS, len(jobs)) or 1
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_name = {
             executor.submit(fn, *args): name
             for name, (fn, args) in jobs.items()
