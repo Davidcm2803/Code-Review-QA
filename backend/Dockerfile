@@ -26,6 +26,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Descarga y cachea el modelo de embeddings durante el build
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
+
+RUN mkdir -p /tmp/semgrep-warmup && \
+    echo "const x = 1;" > /tmp/semgrep-warmup/warmup.js && \
+    semgrep scan --config p/owasp-top-ten --quiet --metrics=off /tmp/semgrep-warmup || true && \
+    rm -rf /tmp/semgrep-warmup
+
 COPY . .
 
 EXPOSE 8000
