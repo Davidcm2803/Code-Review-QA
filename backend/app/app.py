@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from app.config import settings
 
 from app.routes.auth import router as auth_router
 from app.routes.github import router as github_router
@@ -15,7 +16,7 @@ from app.routes.scan import router as scan_router
 from app.database.connection import connect_db, close_db
 from app.routes import chatbot
 
-CORS_ORIGIN = "http://localhost:5173"
+CORS_ORIGIN = settings.CORS_ORIGIN
 
 logger = logging.getLogger("uvicorn.error")
 
