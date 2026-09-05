@@ -187,6 +187,7 @@ export default function Chat() {
         gap: 20,
         width: '100%',
         maxWidth: 1320,
+        height: '100%',
         boxSizing: 'border-box',
       }}
     >
@@ -226,7 +227,7 @@ export default function Chat() {
         </span>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, flex: 1, minHeight: 0, alignItems: 'stretch' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, flex: 1, minHeight: 0, alignItems: 'stretch', overflowY: 'auto' }}>
         <div style={{ flex: '1 1 260px', maxWidth: 380, minWidth: 0 }}>
           <ContextPanel
             scans={scans}
@@ -252,7 +253,7 @@ export default function Chat() {
             borderRadius: 10,
             background: 'var(--card)',
             minWidth: 0,
-            minHeight: 460,
+            minHeight: 360,
             overflow: 'hidden',
           }}
         >
