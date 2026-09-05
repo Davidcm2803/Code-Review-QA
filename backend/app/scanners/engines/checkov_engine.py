@@ -4,6 +4,15 @@ import shutil
 from app.core.logger import logger
 
 
+RELEVANT_FRAMEWORKS = [
+    "dockerfile",
+    "docker_compose",
+    "kubernetes",
+    "github_actions",
+    "gitlab_ci",
+]
+
+
 def run_checkov(repo_path: str) -> dict:
     # esta funcion corre checkov sobre el repo y devuelve el JSON de resultados
     if shutil.which("checkov") is None:
@@ -12,8 +21,15 @@ def run_checkov(repo_path: str) -> dict:
 
     logger.info(f"Ejecutando checkov en {repo_path}")
     try:
+        cmd = [
+            "checkov", "-d", repo_path,
+            "-o", "json",
+            "--compact",
+            "--quiet",
+            "--framework", *RELEVANT_FRAMEWORKS,
+        ]
         result = subprocess.run(
-            ["checkov", "-d", repo_path, "-o", "json", "--compact", "--quiet"],
+            cmd,
             capture_output=True,
             text=True,
             timeout=180,
