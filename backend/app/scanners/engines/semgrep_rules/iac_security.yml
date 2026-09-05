@@ -1,0 +1,109 @@
+
+docker_compose_rules:
+  - id: DC001
+    check_name: "Contenedor en modo privileged"
+    severity: CRITICAL
+    guideline: >
+      El modo privileged=true le da al contenedor acceso casi total al
+      host (dispositivos, kernel). Evitar salvo necesidad estricta y
+      justificada.
+    match:
+      key_path: "privileged"
+      equals: true
+
+  - id: DC002
+    check_name: "Montaje del socket de Docker"
+    severity: CRITICAL
+    guideline: >
+      Montar /var/run/docker.sock dentro de un contenedor le da control
+      total sobre el Docker del host, equivalente a acceso root. Aislar
+      este acceso a un servicio dedicado y minimo si es indispensable.
+    match:
+      key_path: "volumes"
+      contains_substring: "docker.sock"
+
+  - id: DC003
+    check_name: "Uso de network_mode host"
+    severity: HIGH
+    guideline: >
+      network_mode: host elimina el aislamiento de red del contenedor,
+      exponiendolo directamente a la red del host.
+    match:
+      key_path: "network_mode"
+      equals: "host"
+
+  - id: DC004
+    check_name: "Posible credencial hardcodeada en environment"
+    severity: HIGH
+    guideline: >
+      Variables de entorno con nombres como PASSWORD, SECRET, API_KEY,
+      TOKEN con valores literales visibles en el archivo. Usar secrets
+      management o archivos .env no versionados.
+    match:
+      key_path: "environment"
+      key_name_regex: "(?i)(password|secret|api_key|apikey|token)"
+      value_is_literal: true
+
+  - id: DC005
+    check_name: "Imagen con tag 'latest' o sin tag"
+    severity: MEDIUM
+    guideline: >
+      Usar la etiqueta 'latest' (o ninguna) hace que los builds no sean
+      reproducibles y puede introducir cambios inesperados. Fijar una
+      version especifica de la imagen.
+    match:
+      key_path: "image"
+      tag_is_latest_or_missing: true
+
+  - id: DC006
+    check_name: "Puerto expuesto a todas las interfaces (0.0.0.0)"
+    severity: MEDIUM
+    guideline: >
+      Publicar un puerto sin especificar la interfaz (ej. '8000:8000' en
+      vez de '127.0.0.1:8000:8000') lo expone en todas las interfaces de
+      red del host, incluyendo la publica si aplica.
+    match:
+      key_path: "ports"
+      port_binds_all_interfaces: true
+
+  - id: DC007
+    check_name: "Sin limite de recursos (memory/cpus)"
+    severity: LOW
+    guideline: >
+      No definir limites de memoria/CPU permite que un contenedor
+      consuma todos los recursos del host, afectando a otros servicios.
+    match:
+      key_path: "deploy.resources.limits"
+      is_missing: true
+
+dockerfile_rules:
+  - id: DF001
+    check_name: "Contenedor corre como root (sin USER definido)"
+    severity: MEDIUM
+    guideline: >
+      No definir una instruccion USER hace que el contenedor corra como
+      root por defecto, aumentando el impacto de una posible fuga de un
+      proceso comprometido dentro del contenedor.
+    match:
+      instruction_missing: "USER"
+
+  - id: DF002
+    check_name: "Uso de ADD en vez de COPY"
+    severity: LOW
+    guideline: >
+      ADD tiene comportamiento implicito adicional (descarga de URLs,
+      descompresion automatica) que puede ser inesperado o riesgoso.
+      Preferir COPY salvo que se necesite explicitamente ese comportamiento.
+    match:
+      instruction_present: "ADD"
+
+  - id: DF003
+    check_name: "Credencial hardcodeada en ENV/ARG"
+    severity: HIGH
+    guideline: >
+      Variables ENV o ARG con nombres como PASSWORD, SECRET, API_KEY,
+      TOKEN con valores literales quedan grabadas en las capas de la
+      imagen y son extraibles facilmente.
+    match:
+      instruction_in: ["ENV", "ARG"]
+      key_name_regex: "(?i)(password|secret|api_key|apikey|token)"

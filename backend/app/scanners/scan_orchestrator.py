@@ -5,7 +5,7 @@ from app.scanners.engines.bandit_engine import run_bandit
 from app.scanners.engines.semgrep_engine import run_semgrep, build_configs
 from app.scanners.engines.dependency_engine import run_osv_scanner
 from app.scanners.engines.gitleaks_engine import run_gitleaks
-from app.scanners.engines.checkov_engine import run_checkov
+from app.scanners.engines.iac_rules_engine import run_iac_rules
 from app.scanners.dependency_scanner import has_dependency_manifests
 from app.scanners.iac_scanner import has_iac_files
 from app.scanners.normalizer import (

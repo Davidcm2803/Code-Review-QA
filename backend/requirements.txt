@@ -24,7 +24,7 @@ httpx
 # Frameworks
 Bandit
 semgrep
-checkov
+
 
 # RAG
 groq
