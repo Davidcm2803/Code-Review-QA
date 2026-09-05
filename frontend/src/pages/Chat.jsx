@@ -181,17 +181,16 @@ export default function Chat() {
   return (
     <div
       style={{
-        padding: 32,
+        padding: 'clamp(16px, 4vw, 32px)',
         display: 'flex',
         flexDirection: 'column',
         gap: 20,
         width: '100%',
         maxWidth: 1320,
-        height: '100%',
         boxSizing: 'border-box',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
         <div>
           <h1
             style={{
@@ -208,7 +207,7 @@ export default function Chat() {
             QA CHAT
           </h1>
           <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
-            Ask about the vulnerabilities in your code 
+            Ask about the vulnerabilities in your code
           </p>
         </div>
 
@@ -220,36 +219,40 @@ export default function Chat() {
             border: '1px solid var(--border)',
             borderRadius: 999,
             padding: '5px 10px',
+            whiteSpace: 'nowrap',
           }}
         >
           {messagesLeft}/{DAILY_LIMIT} Limit rage question
         </span>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
-        <ContextPanel
-          scans={scans}
-          selectedScanId={selectedScanId}
-          onSelectScan={setSelectedScanId}
-          vulnerabilities={vulnerabilities}
-          loadingScans={loadingScans}
-          loadingVulns={loadingVulns}
-          onNewChat={handleNewChat}
-          sessions={sessions}
-          loadingSessions={loadingSessions}
-          activeSessionId={sessionId}
-          onSelectSession={handleSelectSession}
-        />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, flex: 1, minHeight: 0, alignItems: 'stretch' }}>
+        <div style={{ flex: '1 1 260px', maxWidth: 380, minWidth: 0 }}>
+          <ContextPanel
+            scans={scans}
+            selectedScanId={selectedScanId}
+            onSelectScan={setSelectedScanId}
+            vulnerabilities={vulnerabilities}
+            loadingScans={loadingScans}
+            loadingVulns={loadingVulns}
+            onNewChat={handleNewChat}
+            sessions={sessions}
+            loadingSessions={loadingSessions}
+            activeSessionId={sessionId}
+            onSelectSession={handleSelectSession}
+          />
+        </div>
 
         <div
           style={{
-            flex: 1,
+            flex: '3 1 320px',
             display: 'flex',
             flexDirection: 'column',
             border: '1px solid var(--border)',
             borderRadius: 10,
             background: 'var(--card)',
             minWidth: 0,
+            minHeight: 460,
             overflow: 'hidden',
           }}
         >
@@ -262,11 +265,15 @@ export default function Chat() {
                 fontFamily: 'var(--font-mono)',
                 color: 'var(--muted)',
                 display: 'flex',
+                flexWrap: 'wrap',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                gap: 6,
               }}
             >
-              <span>{selectedScan.repo_name ?? selectedScan.name}</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {selectedScan.repo_name ?? selectedScan.name}
+              </span>
               {!backendReady && <span style={{ color: 'var(--high)' }}>backend not available</span>}
             </div>
           )}
@@ -280,6 +287,7 @@ export default function Chat() {
               display: 'flex',
               flexDirection: 'column',
               gap: 12,
+              minHeight: 0,
             }}
           >
             {loadingHistory ? (

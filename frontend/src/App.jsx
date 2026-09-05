@@ -32,7 +32,13 @@ function AppShell() {
         display: 'flex',
         justifyContent: 'center',
       }}>
-        <div style={{ width: '100%', maxWidth: 1400, padding: '0 clamp(0.75rem, 4vw, 1.5rem)', boxSizing: 'border-box' }}>
+        <div style={{
+          width: '100%',
+          maxWidth: 1400,
+          padding: '0 clamp(0.75rem, 4vw, 1.5rem)',
+          paddingBottom: 'calc(84px + env(safe-area-inset-bottom))',
+          boxSizing: 'border-box',
+        }}>
           <Outlet />
         </div>
       </main>

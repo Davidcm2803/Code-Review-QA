@@ -61,8 +61,7 @@ export default function ContextPanel({
         display: "flex",
         flexDirection: "column",
         gap: 12,
-        width: 280,
-        flexShrink: 0,
+        width: "100%",
       }}
     >
       <div
@@ -101,7 +100,7 @@ export default function ContextPanel({
             Choose a repository below to start chatting about your findings.
           </p>
         ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
             <div
               style={{
                 width: 30,
@@ -126,6 +125,7 @@ export default function ContextPanel({
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
+                minWidth: 0,
               }}
             >
               {selectedScan.repo_name ?? selectedScan.name}
@@ -215,6 +215,7 @@ export default function ContextPanel({
                     border: "none",
                     background: active ? "var(--secondary)" : "transparent",
                     cursor: "pointer",
+                    minWidth: 0,
                   }}
                 >
                   <GitBranch
@@ -230,6 +231,7 @@ export default function ContextPanel({
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
+                      minWidth: 0,
                     }}
                   >
                     {s.repo_name ?? s.name ?? "scan sin nombre"}
@@ -312,6 +314,7 @@ export default function ContextPanel({
                       border: "none",
                       background: active ? "var(--secondary)" : "transparent",
                       cursor: "pointer",
+                      minWidth: 0,
                     }}
                   >
                     <MessageSquare
