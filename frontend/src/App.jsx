@@ -14,8 +14,8 @@ function AppShell() {
     const yaVisto = localStorage.getItem('demo_notice_shown')
     if (!yaVisto) {
       alert(
-        'Este es un demo hecho por mi David Castillo.\n\n' +
-        'El backend se activa manualmente pa que no me hackeen xd. ' +
+        'Este es un demo hecho por David Castillo.\n\n' +
+        'El backend se activa manualmente para evitar accesos no deseados. ' +
         'Si ves errores de conexión, es normal — contáctame para activarlo.'
       )
       localStorage.setItem('demo_notice_shown', 'true')
@@ -23,7 +23,7 @@ function AppShell() {
   }, [])
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100dvh', overflow: 'hidden' }}>
       <Sidebar />
       <main style={{
         flex: 1,
@@ -51,13 +51,13 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<AppShell />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/scan" element={<ScanRepository />} />
-          <Route path="/scan/:scanId/results" element={<ScanDetails />} />
-          <Route path="/upload" element={<UploadCode />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/"                         element={<Dashboard />} />
+          <Route path="/scan"                      element={<ScanRepository />} />
+          <Route path="/scan/:scanId/results"      element={<ScanDetails />} />
+          <Route path="/upload"                    element={<UploadCode />} />
+          <Route path="/reports"                   element={<Reports />} />
+          <Route path="/chat"                      element={<Chat />} />
+          <Route path="/settings"                  element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>
