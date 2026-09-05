@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { CheckCircle, XCircle, AlertCircle, Info, ChevronDown, ChevronUp } from 'lucide-react'
 import Card from '../layout/Card'
 
@@ -15,11 +15,30 @@ const SEVERITY_COLOR = {
   low:      'var(--low)',
 }
 
-const COLLAPSED_COUNT = 8
+const COLLAPSED_COUNT_DESKTOP = 8
+const COLLAPSED_COUNT_MOBILE = 4
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+  return isMobile
+}
 
 export default function ActivityList({ scanData }) {
   const [showAll, setShowAll] = useState(false)
+  const isMobile = useIsMobile()
   const vulns = scanData?.vulnerabilities ?? []
+
+  const COLLAPSED_COUNT = isMobile ? COLLAPSED_COUNT_MOBILE : COLLAPSED_COUNT_DESKTOP
+  const itemPadding = isMobile ? '7px 10px' : '10px 12px'
+  const titleSize = isMobile ? 11 : 12
+  const subSize = isMobile ? 10 : 11
+  const severitySize = isMobile ? 9 : 10
+  const gap = isMobile ? 4 : 6
 
   if (!scanData) {
     return (
@@ -52,13 +71,13 @@ export default function ActivityList({ scanData }) {
 
   return (
     <Card title={`Recent Findings${hasMore ? ` (${sortedAll.length})` : ''}`}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap }}>
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 6,
-            maxHeight: showAll ? 480 : 'none',
+            gap,
+            maxHeight: showAll ? (isMobile ? 360 : 480) : 'none',
             overflowY: showAll ? 'auto' : 'visible',
           }}
         >
@@ -69,8 +88,8 @@ export default function ActivityList({ scanData }) {
                 display: 'flex',
                 flexWrap: 'wrap',
                 alignItems: 'center',
-                gap: 8,
-                padding: '10px 12px',
+                gap: isMobile ? 6 : 8,
+                padding: itemPadding,
                 borderRadius: 6,
                 border: '1px solid var(--border)',
                 background: 'var(--secondary)',
@@ -80,17 +99,17 @@ export default function ActivityList({ scanData }) {
               onMouseEnter={e => e.currentTarget.style.background = 'var(--card)'}
               onMouseLeave={e => e.currentTarget.style.background = 'var(--secondary)'}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 200px', minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 10, flex: '1 1 200px', minWidth: 0 }}>
                 {ICON[vuln.severity] ?? ICON['low']}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{
-                    fontSize: 12, fontFamily: 'monospace', margin: 0,
+                    fontSize: titleSize, fontFamily: 'monospace', margin: 0,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }}>
                     {vuln.title}
                   </p>
                   <p style={{
-                    fontSize: 11, color: 'var(--muted)', margin: 0, marginTop: 2,
+                    fontSize: subSize, color: 'var(--muted)', margin: 0, marginTop: 2,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }}>
                     {vuln.file_path}{vuln.line_start ? `:${vuln.line_start}` : ''}
@@ -99,7 +118,7 @@ export default function ActivityList({ scanData }) {
               </div>
               <div
                 style={{
-                  fontSize: 10, fontFamily: 'monospace', textAlign: 'right',
+                  fontSize: severitySize, fontFamily: 'monospace', textAlign: 'right',
                   whiteSpace: 'nowrap', textTransform: 'capitalize',
                   marginLeft: 'auto',
                   color: SEVERITY_COLOR[vuln.severity] ?? 'var(--muted)',
@@ -119,12 +138,12 @@ export default function ActivityList({ scanData }) {
               alignItems: 'center',
               justifyContent: 'center',
               gap: 6,
-              fontSize: 11,
+              fontSize: isMobile ? 10 : 11,
               color: 'var(--muted)',
               background: 'transparent',
               border: '1px solid var(--border)',
               borderRadius: 6,
-              padding: '6px 0',
+              padding: isMobile ? '5px 0' : '6px 0',
               marginTop: 4,
               cursor: 'pointer',
             }}
