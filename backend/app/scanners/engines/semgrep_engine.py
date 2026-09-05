@@ -10,8 +10,20 @@ LANGUAGE_CONFIGS = {
     "csharp":     ["p/csharp"],
 }
 
-# Config transversal que se agrega siempre que corra semgrep
 BASELINE_CONFIGS = ["p/owasp-top-ten"]
+
+EXCLUDE_DIRS = [
+    "node_modules",
+    "dist",
+    "build",
+    ".git",
+    "venv",
+    ".venv",
+    "__pycache__",
+    ".next",
+    "coverage",
+    "vendor",
+]
 
 
 def build_configs(languages: list[str]) -> list[str]:
@@ -35,7 +47,21 @@ def run_semgrep(repo_path: str, configs: list[str]) -> dict:
 
     logger.info(f"Ejecutando Semgrep en {repo_path} con configs: {configs}")
     try:
-        cmd = ["semgrep", "scan", "--json", "--quiet", "--no-git-ignore", "--error"]
+        cmd = [
+            "semgrep", "scan",
+            "--json",
+            "--quiet",
+            "--error",
+            "--metrics=off",         # evita telemetria que agrega overhead
+            "--jobs", "1",           # limita paralelismo interno de semgrep
+                                      # para no sumar memoria extra sobre el
+                                      # resto del scan
+            "--max-memory", "1000",  # aborta reglas individuales que exceden
+                                      # ~1GB en vez de dejar que Semgrep crezca
+                                      # sin limite y tumbe el proceso completo
+        ]
+        for d in EXCLUDE_DIRS:
+            cmd += ["--exclude", d]
         for cfg in configs:
             cmd += ["--config", cfg]
         cmd.append(repo_path)
