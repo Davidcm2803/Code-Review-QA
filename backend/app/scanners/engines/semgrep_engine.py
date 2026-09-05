@@ -10,8 +10,13 @@ LANGUAGE_CONFIGS = {
     "csharp":     ["p/csharp"],
 }
 
+# Config transversal que se agrega siempre que corra semgrep
 BASELINE_CONFIGS = ["p/owasp-top-ten"]
 
+# Carpetas que NUNCA deben escanearse: dependencias de terceros,
+# builds compilados, entornos virtuales, etc. Escanearlas es lo que
+# causaba que Semgrep tardara 10+ minutos en repos con node_modules
+# pesado, y multiplicaba innecesariamente el uso de RAM.
 EXCLUDE_DIRS = [
     "node_modules",
     "dist",
