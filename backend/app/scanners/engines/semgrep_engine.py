@@ -3,15 +3,16 @@ import json
 import shutil
 from app.core.logger import logger
 
-
-#LANGUAGE_CONFIGS = {
-#    "javascript": ["p/javascript", "p/react"],
-#   "typescript": ["p/typescript", "p/react"],
-#   "csharp":     ["p/csharp"],
-#}
-
-
-BASELINE_CONFIGS = ["p/owasp-top-ten"]
+# Packs especificos por lenguaje detectado. A diferencia de un pack
+# multi-lenguaje como p/owasp-top-ten (que carga reglas de TODOS los
+# lenguajes que Semgrep soporta, incluso los que no estan en el repo),
+# estos solo cargan las reglas relevantes al lenguaje real presente,
+# reduciendo drasticamente el numero de reglas en memoria.
+LANGUAGE_CONFIGS = {
+    "javascript": ["p/javascript"],
+    "typescript": ["p/typescript"],
+    "csharp":     ["p/csharp"],
+}
 
 # Carpetas que nunca deben escanearse: dependencias de terceros,
 # builds compilados, entornos virtuales, etc.
@@ -42,12 +43,21 @@ EXCLUDE_PATTERNS = [
 # dispare minutos de analisis.
 MAX_TARGET_BYTES = 500_000  # ~500KB por archivo
 
+# IMPORTANTE: este limite debe quedar BIEN por debajo del limite total
+# de memoria del contenedor (512MB en Render Free), dejando espacio para
+# FastAPI, Uvicorn, el driver de Mongo, etc. Un valor anterior de 700MB
+# era mayor al total disponible, por lo que nunca se activaba a tiempo:
+# el sistema operativo mataba el contenedor completo antes de que
+# Semgrep respetara su propio limite interno.
+SEMGREP_MAX_MEMORY_MB = 300
+
 
 def build_configs(languages: list[str]) -> list[str]:
-    # Se mantiene la firma para no romper scan_orchestrator.py, pero ahora
-    # siempre retorna el mismo baseline de seguridad, independiente del
-    # lenguaje detectado (p/owasp-top-ten ya es multi-lenguaje).
-    return list(BASELINE_CONFIGS)
+    configs = set()
+    for lang in languages:
+        for cfg in LANGUAGE_CONFIGS.get(lang, []):
+            configs.add(cfg)
+    return list(configs)
 
 
 def run_semgrep(repo_path: str, configs: list[str]) -> dict:
@@ -69,7 +79,7 @@ def run_semgrep(repo_path: str, configs: list[str]) -> dict:
         "--error",
         "--metrics=off",
         "--jobs", "1",
-        "--max-memory", "700",
+        "--max-memory", str(SEMGREP_MAX_MEMORY_MB),
         "--max-target-bytes", str(MAX_TARGET_BYTES),
     ]
     for d in EXCLUDE_DIRS:

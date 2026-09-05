@@ -29,7 +29,7 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 
 RUN mkdir -p /tmp/semgrep-warmup && \
     echo "const x = 1;" > /tmp/semgrep-warmup/warmup.js && \
-    semgrep scan --config p/owasp-top-ten --quiet --metrics=off /tmp/semgrep-warmup || true && \
+    semgrep scan --config p/javascript --quiet --metrics=off /tmp/semgrep-warmup || true && \
     rm -rf /tmp/semgrep-warmup
 
 COPY . .
