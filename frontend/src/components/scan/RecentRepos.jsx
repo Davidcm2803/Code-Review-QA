@@ -11,7 +11,7 @@ export default function RecentRepos({ repos, loading, hasGithub, onSelect }) {
   }, [repos, query])
 
   return (
-    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 24 }}>
+    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 'clamp(14px, 3vw, 24px)', boxSizing: 'border-box' }}>
       {!loading && hasGithub && repos.length > 0 && (
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 14 }}>
           <Search size={14} style={{ position: 'absolute', left: 12, color: 'var(--primary)', pointerEvents: 'none' }} />
@@ -52,7 +52,7 @@ export default function RecentRepos({ repos, loading, hasGithub, onSelect }) {
             <button
               key={full_name}
               onClick={() => onSelect(full_name, clone_url)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '11px 12px', borderRadius: 8, border: '1px solid transparent', background: 'transparent', cursor: 'pointer', textAlign: 'left', transition: 'background 0.12s, border-color 0.12s' }}
+              style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%', padding: '11px 12px', borderRadius: 8, border: '1px solid transparent', background: 'transparent', cursor: 'pointer', textAlign: 'left', transition: 'background 0.12s, border-color 0.12s', boxSizing: 'border-box' }}
               onMouseEnter={e => {
                 e.currentTarget.style.background = 'rgba(0,255,136,0.06)'
                 e.currentTarget.style.borderColor = 'rgba(0,255,136,0.25)'
@@ -70,17 +70,22 @@ export default function RecentRepos({ repos, loading, hasGithub, onSelect }) {
                 if (chevron) chevron.style.color = 'var(--muted)'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: '1 1 160px' }}>
                 <GitBranch data-branch-icon size={14} style={{ color: 'var(--muted)', flexShrink: 0, transition: 'color 0.12s' }} />
-                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg)', fontFamily: 'monospace' }}>{full_name}</span>
+                <span style={{
+                  fontSize: 13, fontWeight: 500, color: 'var(--fg)', fontFamily: 'monospace',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
+                }}>
+                  {full_name}
+                </span>
                 {isPrivate && (
-                  <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(0,255,136,0.08)', color: 'var(--primary)', border: '1px solid rgba(0,255,136,0.25)' }}>
+                  <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(0,255,136,0.08)', color: 'var(--primary)', border: '1px solid rgba(0,255,136,0.25)', flexShrink: 0 }}>
                     private
                   </span>
                 )}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 'auto' }}>
+                <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
                   {new Date(updated_at).toLocaleDateString()}
                 </span>
                 <ChevronRight data-chevron size={13} style={{ color: 'var(--muted)', transition: 'color 0.12s' }} />

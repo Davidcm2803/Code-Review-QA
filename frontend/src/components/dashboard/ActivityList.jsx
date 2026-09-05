@@ -67,9 +67,10 @@ export default function ActivityList({ scanData }) {
               key={vuln._id ?? i}
               style={{
                 display: 'flex',
+                flexWrap: 'wrap',
                 alignItems: 'center',
-                gap: 10,
-                padding: 10,
+                gap: 8,
+                padding: '10px 12px',
                 borderRadius: 6,
                 border: '1px solid var(--border)',
                 background: 'var(--secondary)',
@@ -79,22 +80,28 @@ export default function ActivityList({ scanData }) {
               onMouseEnter={e => e.currentTarget.style.background = 'var(--card)'}
               onMouseLeave={e => e.currentTarget.style.background = 'var(--secondary)'}
             >
-              {ICON[vuln.severity] ?? ICON['low']}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{
-                  fontSize: 12, fontFamily: 'monospace', margin: 0,
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                }}>
-                  {vuln.title}
-                </p>
-                <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0, marginTop: 2 }}>
-                  {vuln.file_path}{vuln.line_start ? `:${vuln.line_start}` : ''}
-                </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 200px', minWidth: 0 }}>
+                {ICON[vuln.severity] ?? ICON['low']}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{
+                    fontSize: 12, fontFamily: 'monospace', margin: 0,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}>
+                    {vuln.title}
+                  </p>
+                  <p style={{
+                    fontSize: 11, color: 'var(--muted)', margin: 0, marginTop: 2,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}>
+                    {vuln.file_path}{vuln.line_start ? `:${vuln.line_start}` : ''}
+                  </p>
+                </div>
               </div>
               <div
                 style={{
                   fontSize: 10, fontFamily: 'monospace', textAlign: 'right',
                   whiteSpace: 'nowrap', textTransform: 'capitalize',
+                  marginLeft: 'auto',
                   color: SEVERITY_COLOR[vuln.severity] ?? 'var(--muted)',
                 }}
               >

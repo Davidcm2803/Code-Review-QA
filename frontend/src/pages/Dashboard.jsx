@@ -98,7 +98,7 @@ export default function Dashboard() {
   return (
     <div
       style={{
-        padding: 32,
+        padding: "clamp(16px, 4vw, 32px)",
         display: "flex",
         flexDirection: "column",
         gap: 20,
@@ -110,11 +110,13 @@ export default function Dashboard() {
       <div
         style={{
           display: "flex",
+          flexWrap: "wrap",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: 12,
         }}
       >
-        <div>
+        <div style={{ minWidth: 0 }}>
           <h1 style={{ fontSize: 22, fontWeight: 600, color: "#e2e8e4", margin: 0 }}>
             {scanData ? `${repoName}` : "Dashboard"}
           </h1>
@@ -136,6 +138,7 @@ export default function Dashboard() {
               fontWeight: 600,
               cursor: "pointer",
               border: "none",
+              whiteSpace: "nowrap",
             }}
           >
             <Zap size={13} /> Quick Scan
@@ -146,7 +149,7 @@ export default function Dashboard() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
           gap: 12,
         }}
       >
@@ -155,7 +158,13 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: 14,
+        }}
+      >
         <SeverityBreakdown metrics={metrics} />
         <ActivityList scanData={scanData} />
       </div>

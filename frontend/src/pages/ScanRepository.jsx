@@ -125,12 +125,13 @@ export default function ScanRepository() {
   return (
     <div
       style={{
-        padding: 32,
+        padding: "clamp(16px, 4vw, 32px)",
         display: "flex",
         flexDirection: "column",
         gap: 20,
         width: "100%",
         maxWidth: 1320,
+        boxSizing: "border-box",
       }}
     >
       <div>
@@ -183,8 +184,10 @@ export default function ScanRepository() {
         <div
           style={{
             display: "flex",
+            flexWrap: "wrap",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: 8,
             marginBottom: -10,
           }}
         >
@@ -215,6 +218,7 @@ export default function ScanRepository() {
               color: refreshing ? "#3a4a3f" : "#5a6b60",
               fontSize: 12,
               transition: "color 0.15s, border-color 0.15s",
+              whiteSpace: "nowrap",
             }}
             onMouseEnter={(e) => {
               if (!refreshing) {

@@ -92,7 +92,7 @@ export default function UploadCode() {
   return (
     <div
       style={{
-        padding: 32,
+        padding: 'clamp(16px, 4vw, 32px)',
         display: 'flex',
         flexDirection: 'column',
         gap: 20,
@@ -111,11 +111,11 @@ export default function UploadCode() {
           borderRadius: 12,
           border: '1px solid var(--border)',
           background: 'var(--card)',
-          padding: 24,
+          padding: 'clamp(14px, 3vw, 24px)',
           boxSizing: 'border-box',
         }}
       >
-        <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ marginBottom: 20, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ display: 'flex', gap: 8 }}>
             {['upload', 'paste'].map((tab) => (
               <button
@@ -154,6 +154,7 @@ export default function UploadCode() {
               cursor: !canSubmit || scanning ? 'not-allowed' : 'pointer',
               border: 'none',
               opacity: !canSubmit || scanning ? 0.45 : 1,
+              whiteSpace: 'nowrap',
             }}
           >
             <Zap size={14} />
@@ -168,7 +169,7 @@ export default function UploadCode() {
         </p>
 
         {mode === 'upload' ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
             <Dropzone onFilesAdded={handleFilesAdded} onError={handleFilesError} />
             <FileQueue files={queue} onRemove={handleRemove} />
           </div>

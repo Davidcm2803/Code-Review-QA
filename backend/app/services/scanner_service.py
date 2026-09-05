@@ -13,6 +13,7 @@ from app.services.repo_fetcher_service import (
 from app.services.runner_client import run_dast
 from app.scanners.scan_orchestrator import run_scan
 from app.scanners.normalizer import compute_metrics, compute_security_score, normalize_nuclei
+from app.ai.rag.indexer import index_repository_vulnerabilities
 from app.core.logger import logger
 
 
@@ -39,7 +40,7 @@ async def _emit_event(db, scan_id: str, event_type: str, message: str):
 
 # crea el documento de repositorio temporal
 async def _create_repo_and_scan(db, user_id: str, repo_name: str, source_type: str, extra_repo_fields: dict = None):
-    
+
     now = datetime.now(timezone.utc)
     repo_doc = {
         "_id":         ObjectId(),
@@ -124,9 +125,9 @@ async def start_scan(
     )
     return scan_id
 
-# valida archivos subidos y lanza un scan 
+# valida archivos subidos y lanza un scan
 async def start_scan_from_upload(files: list[UploadFile], user_id: str) -> str:
-    
+
     if not files:
         raise ValueError("No se recibieron archivos")
     if len(files) > MAX_FILES:
@@ -153,7 +154,7 @@ async def start_scan_from_upload(files: list[UploadFile], user_id: str) -> str:
 
 # valida codigo pegado y lanza un scan sobre ese archivo
 async def start_scan_from_paste(code: str, filename: str, user_id: str) -> str:
-    
+
     lines = code.splitlines()
     if not lines:
         raise ValueError("El codigo esta vacio")
@@ -172,9 +173,10 @@ async def start_scan_from_paste(code: str, filename: str, user_id: str) -> str:
     )
     return scan_id
 
-# guarda las vulnerabilidades encontradas y marca el scan como completado
-async def _finalize_scan(db, scan_id: str, vulns: list[dict]):
-    
+# guarda las vulnerabilidades encontradas, marca el scan como completado
+# y dispara el indexado RAG en background (no bloquea al usuario)
+async def _finalize_scan(db, scan_id: str, repository_id: str, vulns: list[dict]):
+
     if vulns:
         now = datetime.now(timezone.utc)
         for v in vulns:
@@ -205,6 +207,19 @@ async def _finalize_scan(db, scan_id: str, vulns: list[dict]):
     )
     await _emit_event(db, scan_id, "completed", f"Scan completado — {total} vulnerabilidades encontradas")
     logger.info(f"Scan {scan_id} completado: {total} vulns, score {score}")
+
+    # Indexado en segundo plano: arranca apenas termina el scan,
+    # mientras el usuario todavía está mirando el reporte.
+    if vulns:
+        asyncio.create_task(_index_in_background(db, scan_id, repository_id))
+
+
+async def _index_in_background(db, scan_id: str, repository_id: str):
+    try:
+        count = await index_repository_vulnerabilities(db, ObjectId(repository_id), scan_id)
+        logger.info(f"Indexado en background completo para scan {scan_id}: {count} chunks")
+    except Exception as e:
+        logger.error(f"Fallo el indexado en background para scan {scan_id}: {e}", exc_info=True)
 
 
 async def _mark_scan_failed(db, scan_id: str, error: Exception):
@@ -259,7 +274,7 @@ async def _run_scan_task(
                 # el estático sigue valiendo, no se marca el scan como failed por esto
 
         await _emit_event(db, scan_id, "progress", "Calculando metricas y generando reporte...")
-        await _finalize_scan(db, scan_id, vulns)
+        await _finalize_scan(db, scan_id, repository_id, vulns)
 
     except Exception as e:
         await _mark_scan_failed(db, scan_id, e)
@@ -269,7 +284,7 @@ async def _run_scan_task(
 
 # prepara el workspace temp con los archivos ejecuta los scanners
 async def _run_scan_task_from_files(db, scan_id: str, repository_id: str, files: list[tuple[str, bytes]]):
-    
+
     repo_path = None
     try:
         await _emit_event(db, scan_id, "progress", f"Preparando {len(files)} archivo(s)...")
@@ -281,7 +296,7 @@ async def _run_scan_task_from_files(db, scan_id: str, repository_id: str, files:
         vulns = await loop.run_in_executor(None, run_scan, repo_path, repository_id, scan_id)
 
         await _emit_event(db, scan_id, "progress", "Calculando metricas y generando reporte...")
-        await _finalize_scan(db, scan_id, vulns)
+        await _finalize_scan(db, scan_id, repository_id, vulns)
 
     except Exception as e:
         await _mark_scan_failed(db, scan_id, e)
@@ -291,7 +306,7 @@ async def _run_scan_task_from_files(db, scan_id: str, repository_id: str, files:
 
 # devuelve el estado actual del scan y su ultimo evento de progreso
 async def get_scan_status(scan_id: str, user_id: str) -> dict | None:
-    
+
     db = get_db()
     try:
         oid = _to_object_id(scan_id)
@@ -316,8 +331,8 @@ async def get_scan_status(scan_id: str, user_id: str) -> dict | None:
         "summary":        scan.get("executive_summary"),
         "repository_id":  str(scan.get("repository_id", "")),
     }
-    
-# devuelve el scan completo con sus vulnerabilidades 
+
+# devuelve el scan completo con sus vulnerabilidades
 async def get_scan_results(scan_id: str, user_id: str) -> dict | None:
 
     db = get_db()
@@ -361,7 +376,7 @@ async def get_latest_scan(user_id: str) -> dict | None:
         return None
     return await get_scan_results(str(scan["_id"]), user_id)
 
-# devuelve una vulnerabilidad dentro de un scan 
+# devuelve una vulnerabilidad dentro de un scan
 async def get_vulnerability(scan_id: str, vuln_id: str, user_id: str) -> dict | None:
     db = get_db()
     try:
