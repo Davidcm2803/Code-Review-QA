@@ -14,8 +14,8 @@ function AppShell() {
     const yaVisto = localStorage.getItem('demo_notice_shown')
     if (!yaVisto) {
       alert(
-        'Este es un demo hecho por David Castillo.\n\n' +
-        'El backend se activa manualmente para evitar accesos no deseados. ' +
+        'Este es un demo hecho por mi David Castillo.\n\n' +
+        'El backend se activa manualmente pa que no me hackeen xd. ' +
         'Si ves errores de conexión, es normal — contáctame para activarlo.'
       )
       localStorage.setItem('demo_notice_shown', 'true')
@@ -23,7 +23,7 @@ function AppShell() {
   }, [])
 
   return (
-    <div style={{ display: 'flex', height: '100dvh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100svh', overflow: 'hidden' }}>
       <Sidebar />
       <main style={{
         flex: 1,
@@ -36,7 +36,7 @@ function AppShell() {
           width: '100%',
           maxWidth: 1400,
           padding: '0 clamp(0.75rem, 4vw, 1.5rem)',
-          paddingBottom: 'calc(60px + env(safe-area-inset-bottom) + 12px)',
+          paddingBottom: 'calc(60px + env(safe-area-inset-bottom) + 32px)',
           boxSizing: 'border-box',
         }}>
           <Outlet />
