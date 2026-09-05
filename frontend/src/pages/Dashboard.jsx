@@ -99,6 +99,10 @@ export default function Dashboard() {
     <div
       style={{
         padding: "clamp(16px, 4vw, 32px)",
+        // Padding extra abajo para que el bottom-nav mobile (fixed) nunca
+        // tape el botón "View All" de Recent Findings, sin importar
+        // si App.jsx ya reserva espacio o no (doble seguro).
+        paddingBottom: "calc(clamp(16px, 4vw, 32px) + 100px)",
         display: "flex",
         flexDirection: "column",
         gap: 20,
