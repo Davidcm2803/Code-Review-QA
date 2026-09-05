@@ -36,7 +36,7 @@ function AppShell() {
           width: '100%',
           maxWidth: 1400,
           padding: '0 clamp(0.75rem, 4vw, 1.5rem)',
-          paddingBottom: 'calc(96px + env(safe-area-inset-bottom))',
+          paddingBottom: 'calc(60px + env(safe-area-inset-bottom) + 12px)',
           boxSizing: 'border-box',
         }}>
           <Outlet />
@@ -51,13 +51,13 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<AppShell />}>
-          <Route path="/"                         element={<Dashboard />} />
-          <Route path="/scan"                      element={<ScanRepository />} />
-          <Route path="/scan/:scanId/results"      element={<ScanDetails />} />
-          <Route path="/upload"                    element={<UploadCode />} />
-          <Route path="/reports"                   element={<Reports />} />
-          <Route path="/chat"                      element={<Chat />} />
-          <Route path="/settings"                  element={<Settings />} />
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/scan" element={<ScanRepository />} />
+          <Route path="/scan/:scanId/results" element={<ScanDetails />} />
+          <Route path="/upload" element={<UploadCode />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>
