@@ -82,7 +82,7 @@ def _run_gitleaks_job(repo_path, repository_id, scan_id):
 
 def _run_checkov_job(repo_path, repository_id, scan_id):
     logger.info("Ejecutando checkov (IaC)")
-    raw = run_checkov(repo_path)
+    raw = run_iac_rules(repo_path)
     vulns = normalize_checkov(raw, repository_id, scan_id, repo_path)
     logger.info(f"checkov: {len(vulns)} configuraciones inseguras encontradas")
     return vulns
