@@ -1,18 +1,10 @@
 import subprocess
 import json
 import shutil
+import os
 from app.core.logger import logger
 
-# Packs especificos por lenguaje detectado. A diferencia de un pack
-# multi-lenguaje como p/owasp-top-ten (que carga reglas de TODOS los
-# lenguajes que Semgrep soporta, incluso los que no estan en el repo),
-# estos solo cargan las reglas relevantes al lenguaje real presente,
-# reduciendo drasticamente el numero de reglas en memoria.
-LANGUAGE_CONFIGS = {
-    "javascript": ["p/javascript"],
-    "typescript": ["p/typescript"],
-    "csharp":     ["p/csharp"],
-}
+RULES_PATH = os.path.join(os.path.dirname(__file__), "semgrep_rules", "security.yml")
 
 # Carpetas que nunca deben escanearse: dependencias de terceros,
 # builds compilados, entornos virtuales, etc.
@@ -38,26 +30,18 @@ EXCLUDE_PATTERNS = [
     "*.lock",
 ]
 
-# Semgrep tarda proporcional al tamano de archivo. Saltar archivos muy
-# grandes (ej. bundles no excluidos por nombre) evita que un solo archivo
-# dispare minutos de analisis.
 MAX_TARGET_BYTES = 500_000  # ~500KB por archivo
-
-# IMPORTANTE: este limite debe quedar BIEN por debajo del limite total
-# de memoria del contenedor (512MB en Render Free), dejando espacio para
-# FastAPI, Uvicorn, el driver de Mongo, etc. Un valor anterior de 700MB
-# era mayor al total disponible, por lo que nunca se activaba a tiempo:
-# el sistema operativo mataba el contenedor completo antes de que
-# Semgrep respetara su propio limite interno.
-SEMGREP_MAX_MEMORY_MB = 300
+SEMGREP_MAX_MEMORY_MB = 300  # margen bajo el limite total del contenedor (512MB)
 
 
 def build_configs(languages: list[str]) -> list[str]:
-    configs = set()
-    for lang in languages:
-        for cfg in LANGUAGE_CONFIGS.get(lang, []):
-            configs.add(cfg)
-    return list(configs)
+    # Se mantiene la firma para no romper scan_orchestrator.py. El ruleset
+    # local ya filtra por lenguaje internamente (cada regla declara sus
+    # "languages"), asi que basta con devolver la ruta al archivo una vez,
+    # sin importar cuantos lenguajes se hayan detectado.
+    if not languages:
+        return []
+    return [RULES_PATH]
 
 
 def run_semgrep(repo_path: str, configs: list[str]) -> dict:
@@ -69,6 +53,10 @@ def run_semgrep(repo_path: str, configs: list[str]) -> dict:
     if shutil.which("semgrep") is None:
         logger.error("Semgrep no esta instalado")
         return {"results": [], "errors": ["Semgrep not found"]}
+
+    if not os.path.exists(RULES_PATH):
+        logger.error(f"Ruleset de Semgrep no encontrado en {RULES_PATH}")
+        return {"results": [], "errors": ["Ruleset file not found"]}
 
     logger.info(f"Ejecutando Semgrep en {repo_path} con configs: {configs}")
 
