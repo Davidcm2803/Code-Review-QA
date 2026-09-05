@@ -62,6 +62,9 @@ export default function ContextPanel({
         flexDirection: "column",
         gap: 12,
         width: "100%",
+        maxHeight: "min(560px, 65vh)",
+        overflowY: "auto",
+        paddingRight: 2,
       }}
     >
       <div
