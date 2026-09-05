@@ -88,11 +88,11 @@ def _run_checkov_job(repo_path, repository_id, scan_id):
     return vulns
 
 
-MAX_PARALLEL_SCANNERS = 2  # limite de scanners simultaneos para no joder al hp render con la RAM
+MAX_PARALLEL_SCANNERS = 1  
 
 
 def run_scan(repo_path: str, repository_id: str, scan_id: str) -> list[dict]:
-    # corre los engines en paralelo de 2 a 2
+    # corre los engines en paralelo, pero limitado a MAX_PARALLEL_SCANNERS
 
     languages = detect_languages(repo_path)
     semgrep_langs = [lang for lang in languages if lang in SEMGREP_LANGUAGES]
