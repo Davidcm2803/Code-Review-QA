@@ -228,7 +228,16 @@ export default function Chat() {
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, flex: 1, minHeight: 0, alignItems: 'stretch', overflowY: 'auto' }}>
-        <div style={{ flex: '1 1 260px', maxWidth: 380, minWidth: 0 }}>
+        <div
+          style={{
+            flex: '1 1 260px',
+            maxWidth: 380,
+            minWidth: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+          }}
+        >
           <ContextPanel
             scans={scans}
             selectedScanId={selectedScanId}

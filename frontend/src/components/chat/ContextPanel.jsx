@@ -3,7 +3,6 @@ import {
   ShieldAlert,
   RefreshCw,
   Check,
-  History,
   MessageSquare,
 } from "lucide-react";
 import Card from "../layout/Card";
@@ -64,12 +63,12 @@ export default function ContextPanel({
         width: "100%",
         height: "100%",
         minHeight: 0,
-        overflowY: "auto",
-        paddingRight: 2,
       }}
     >
+      {/* Active repository */}
       <div
         style={{
+          flexShrink: 0,
           background: "var(--card)",
           border: "1px solid var(--border)",
           borderRadius: 12,
@@ -138,9 +137,11 @@ export default function ContextPanel({
         )}
       </div>
 
+      {/* Findings summary */}
       {selectedScanId && !loadingVulns && total > 0 && (
         <div
           style={{
+            flexShrink: 0,
             background: "var(--card)",
             border: "1px solid var(--border)",
             borderRadius: 12,
@@ -191,72 +192,108 @@ export default function ContextPanel({
         </div>
       )}
 
-      <Card title="Choose repository">
-        {loadingScans ? (
-          <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>
-            Loading scans...
-          </p>
-        ) : scans.length === 0 ? (
-          <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>
-            No scans yet. Run one first.
-          </p>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {scans.map((s) => {
-              const id = s._id ?? s.scan_id;
-              const active = id === selectedScanId;
-              return (
-                <button
-                  key={id}
-                  onClick={() => onSelectScan(id)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    textAlign: "left",
-                    padding: "8px 9px",
-                    borderRadius: 8,
-                    border: "none",
-                    background: active ? "var(--secondary)" : "transparent",
-                    cursor: "pointer",
-                    minWidth: 0,
-                  }}
-                >
-                  <GitBranch
-                    size={12}
-                    style={{ color: "var(--muted)", flexShrink: 0 }}
-                  />
-                  <span
+      {/* Choose repository — this is the ONLY section that grows and scrolls internally */}
+      <div
+        style={{
+          flex: "1 1 auto",
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+          overflow: "hidden",
+        }}
+      >
+        <p
+          style={{
+            flexShrink: 0,
+            fontSize: 11,
+            fontWeight: 600,
+            color: "var(--fg)",
+            margin: 0,
+            padding: "12px 14px 8px",
+          }}
+        >
+          Choose repository
+        </p>
+
+        <div
+          style={{
+            flex: "1 1 auto",
+            minHeight: 0,
+            overflowY: "auto",
+            padding: "0 14px 12px",
+          }}
+        >
+          {loadingScans ? (
+            <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>
+              Loading scans...
+            </p>
+          ) : scans.length === 0 ? (
+            <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>
+              No scans yet. Run one first.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {scans.map((s) => {
+                const id = s._id ?? s.scan_id;
+                const active = id === selectedScanId;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => onSelectScan(id)}
                     style={{
-                      flex: 1,
-                      fontSize: 12,
-                      fontFamily: "var(--font-mono)",
-                      color: active ? "var(--fg)" : "var(--muted)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      textAlign: "left",
+                      padding: "8px 9px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: active ? "var(--secondary)" : "transparent",
+                      cursor: "pointer",
                       minWidth: 0,
                     }}
                   >
-                    {s.repo_name ?? s.name ?? "scan sin nombre"}
-                  </span>
-                  {active && (
-                    <Check
-                      size={13}
-                      style={{ color: "var(--primary)", flexShrink: 0 }}
+                    <GitBranch
+                      size={12}
+                      style={{ color: "var(--muted)", flexShrink: 0 }}
                     />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </Card>
+                    <span
+                      style={{
+                        flex: 1,
+                        fontSize: 12,
+                        fontFamily: "var(--font-mono)",
+                        color: active ? "var(--fg)" : "var(--muted)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        minWidth: 0,
+                      }}
+                    >
+                      {s.repo_name ?? s.name ?? "scan sin nombre"}
+                    </span>
+                    {active && (
+                      <Check
+                        size={13}
+                        style={{ color: "var(--primary)", flexShrink: 0 }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
 
+      {/* New chat button */}
       {selectedScanId && (
         <button
           onClick={onNewChat}
           style={{
+            flexShrink: 0,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -274,92 +311,95 @@ export default function ContextPanel({
         </button>
       )}
 
+      {/* History */}
       {selectedScanId && (
-        <Card title="History">
-          {loadingSessions ? (
-            <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>
-              Loading...
-            </p>
-          ) : sessions.length === 0 ? (
-            <p
-              style={{
-                fontSize: 12,
-                color: "var(--muted)",
-                margin: 0,
-                lineHeight: 1.5,
-              }}
-            >
-              There aren't any saved conversations for this repository yet.
-            </p>
-          ) : (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 4,
-                maxHeight: 220,
-                overflowY: "auto",
-              }}
-            >
-              {sessions.map((s) => {
-                const id = s._id ?? s.session_id;
-                const active = id === activeSessionId;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => onSelectSession(id)}
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: 8,
-                      textAlign: "left",
-                      padding: "8px 9px",
-                      borderRadius: 8,
-                      border: "none",
-                      background: active ? "var(--secondary)" : "transparent",
-                      cursor: "pointer",
-                      minWidth: 0,
-                    }}
-                  >
-                    <MessageSquare
-                      size={12}
+        <div style={{ flexShrink: 0 }}>
+          <Card title="History">
+            {loadingSessions ? (
+              <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>
+                Loading...
+              </p>
+            ) : sessions.length === 0 ? (
+              <p
+                style={{
+                  fontSize: 12,
+                  color: "var(--muted)",
+                  margin: 0,
+                  lineHeight: 1.5,
+                }}
+              >
+                There aren't any saved conversations for this repository yet.
+              </p>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                  maxHeight: 220,
+                  overflowY: "auto",
+                }}
+              >
+                {sessions.map((s) => {
+                  const id = s._id ?? s.session_id;
+                  const active = id === activeSessionId;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => onSelectSession(id)}
                       style={{
-                        color: active ? "var(--primary)" : "var(--muted)",
-                        flexShrink: 0,
-                        marginTop: 2,
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 8,
+                        textAlign: "left",
+                        padding: "8px 9px",
+                        borderRadius: 8,
+                        border: "none",
+                        background: active ? "var(--secondary)" : "transparent",
+                        cursor: "pointer",
+                        minWidth: 0,
                       }}
-                    />
-                    <span style={{ flex: 1, minWidth: 0 }}>
-                      <span
+                    >
+                      <MessageSquare
+                        size={12}
                         style={{
-                          display: "block",
-                          fontSize: 12,
-                          color: active ? "var(--fg)" : "var(--muted)",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {s.title || "Conversación"}
-                      </span>
-                      <span
-                        style={{
-                          display: "block",
-                          fontSize: 10,
-                          fontFamily: "var(--font-mono)",
-                          color: "var(--muted)",
+                          color: active ? "var(--primary)" : "var(--muted)",
+                          flexShrink: 0,
                           marginTop: 2,
                         }}
-                      >
-                        {formatSessionDate(s.created_at)}
+                      />
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span
+                          style={{
+                            display: "block",
+                            fontSize: 12,
+                            color: active ? "var(--fg)" : "var(--muted)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {s.title || "Conversación"}
+                        </span>
+                        <span
+                          style={{
+                            display: "block",
+                            fontSize: 10,
+                            fontFamily: "var(--font-mono)",
+                            color: "var(--muted)",
+                            marginTop: 2,
+                          }}
+                        >
+                          {formatSessionDate(s.created_at)}
+                        </span>
                       </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </Card>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        </div>
       )}
     </div>
   );
