@@ -236,6 +236,7 @@ export default function Chat() {
             display: 'flex',
             flexDirection: 'column',
             minHeight: 0,
+            overflow: 'hidden',
           }}
         >
           <ContextPanel

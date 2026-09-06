@@ -63,6 +63,7 @@ export default function ContextPanel({
         width: "100%",
         height: "100%",
         minHeight: 0,
+        overflow: "hidden",
       }}
     >
       {/* Active repository */}
