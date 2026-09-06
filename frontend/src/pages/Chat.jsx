@@ -227,7 +227,7 @@ export default function Chat() {
         </span>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, flex: 1, minHeight: 0, alignItems: 'stretch', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, flex: 1, minHeight: 0, alignItems: 'stretch', overflow: 'hidden' }}>
         <div
           style={{
             flex: '1 1 260px',
