@@ -202,7 +202,7 @@ export default function ContextPanel({
               display: "flex",
               flexDirection: "column",
               gap: 4,
-              maxHeight: 320,
+              maxHeight: "min(320px, 38vh)",
               overflowY: "auto",
             }}
           >
